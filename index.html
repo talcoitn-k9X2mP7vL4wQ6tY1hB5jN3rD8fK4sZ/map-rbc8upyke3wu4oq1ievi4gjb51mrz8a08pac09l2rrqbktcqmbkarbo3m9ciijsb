@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TalcoMap — le monde à portée de main</title>
+<meta name="description" content="Carte OpenStreetMap, itinéraires voiture, vélo, marche et transports, services à proximité.">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="TalcoMap"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#1a73e8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#fff;--surf:#fff;--glass:#fff;--glass2:#fff;--ink:#202124;--mut:#5f6368;--line:#dadce0;--acc:#1a73e8;--onacc:#fff;--accbg:#e8f0fe;--in:#f1f3f4;--sd:0 1px 3px rgba(60,64,67,.3),0 4px 8px 3px rgba(60,64,67,.15)}
+:root[data-theme=dark]{--bg:#202124;--surf:#2d2e31;--glass:#2d2e31;--glass2:#2d2e31;--ink:#e8eaed;--mut:#9aa0a6;--line:#3c4043;--acc:#8ab4f8;--onacc:#202124;--accbg:#394457;--in:#3c4043}
+@media(prefers-color-scheme:dark){:root[data-theme=auto]{--bg:#202124;--surf:#2d2e31;--glass:#2d2e31;--glass2:#2d2e31;--ink:#e8eaed;--mut:#9aa0a6;--line:#3c4043;--acc:#8ab4f8;--onacc:#202124;--accbg:#394457;--in:#3c4043}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;font:16px/1.4 "Google Sans",Roboto,-apple-system,"Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg);overscroll-behavior:none}
+#map{position:fixed;inset:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surf);color:var(--acc);border-radius:99px;padding:8px 16px;font-weight:500;transition:background .15s,box-shadow .15s}
+button:hover{background:var(--accbg)}button:active{background:var(--accbg)}:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.pri{background:var(--acc);color:var(--onacc);border-color:var(--acc)}button:disabled{opacity:.4;pointer-events:none}
+input,select{width:100%;border:0;background:var(--in);border-radius:12px;padding:12px 14px;color:var(--ink)}
+#top{position:fixed;z-index:1100;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top))}
+#sb{display:flex;align-items:center;gap:6px;height:48px;border-radius:24px;background:var(--surf);box-shadow:var(--sd);padding:0 6px 0 12px}
+#sb .logo{width:26px;height:26px;border-radius:7px}#sb input{background:none;padding:0 6px;border-radius:0;flex:1;height:100%;font-size:16px}#sb input:focus-visible{outline:0}
+#sb button{width:36px;height:36px;padding:0;border:0;border-radius:50%;background:none;color:var(--ink);font-size:18px}
+.ac{display:flex;flex-direction:column}.ac:empty{display:none}#qr{margin-top:6px;background:var(--surf);border-radius:16px;box-shadow:var(--sd);overflow:hidden;max-height:50dvh;overflow-y:auto}
+.ac button,.item{text-align:left;display:block;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--ink);padding:10px 14px;font-weight:400}
+.ac small,.item small{display:block;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 6px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chips button{white-space:nowrap;flex:none;background:var(--surf);color:var(--ink);border:0;box-shadow:0 1px 3px rgba(60,64,67,.35);padding:7px 13px;font-weight:400}.chips button.on{background:var(--accbg);color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+#tabs{position:fixed;z-index:1200;left:0;right:0;bottom:0;display:flex;height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surf);border-top:1px solid var(--line)}
+#tabs button{flex:1;border:0;border-radius:0;background:none;color:var(--mut);font-size:11.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;font-weight:500}
+#tabs i{font-style:normal;font-size:19px;width:56px;height:28px;border-radius:14px;display:grid;place-items:center;transition:background .2s}#tabs button.on{color:var(--acc)}#tabs button.on i{background:var(--accbg)}
+#panel{position:fixed;z-index:1000;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));display:flex;flex-direction:column;background:var(--surf);border-radius:16px 16px 0 0;box-shadow:0 -2px 10px rgba(60,64,67,.3);overflow:hidden;transition:height .3s cubic-bezier(.2,0,0,1)}
+#panel.min{height:78px}#panel.mid{height:44dvh}#panel.full{height:calc(100dvh - 200px - env(safe-area-inset-bottom))}
+#grip{height:26px;display:grid;place-items:center;cursor:grab;flex:none;touch-action:none}#grip:after{content:"";width:36px;height:4px;border-radius:9px;background:var(--line)}
+header{display:flex;align-items:center;gap:10px;padding:0 16px 8px;flex:none}header h1{margin:0;font-size:20px;font-weight:500;flex:1}
+.body{overflow:auto;padding:4px 16px 20px;flex:1;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+section>*+*{margin-top:12px}h3{margin:6px 0;font-weight:500}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>input{flex:1;min-width:140px}
+.fld{display:flex;gap:6px}.fld button{padding:8px 12px;flex:none}.mut{color:var(--mut);font-size:13px;margin:0}
+#place h3{font-size:22px;margin:0}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.cards button{display:flex;flex-direction:column;align-items:center;padding:8px 2px;border-radius:14px;color:var(--ink)}.cards b{font-size:14.5px}.cards small{color:var(--mut);font-size:11.5px}.cards .on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}.cards .on small{color:var(--acc)}.cards .na{opacity:.4}
+.step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}.step i{font-style:normal;width:26px;text-align:center}.step span{flex:1}
+.leg{display:inline-block;padding:1px 8px;border-radius:6px;background:var(--acc);color:var(--onacc);font-size:12px;font-weight:700;margin-right:3px}
+.load{height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent) 0 0/200% 100%;animation:ld 1s linear infinite}@keyframes ld{to{background-position:-200% 0}}
+.pin i{display:block;width:30px;height:30px;border-radius:50% 50% 50% 0;background:#ea4335;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}.pin i:after{content:"";position:absolute;inset:8px;border-radius:50%;background:#fff}
+.me i{display:block;width:18px;height:18px;border-radius:50%;background:#1a73e8;border:3px solid #fff;animation:pl 1.8s infinite}@keyframes pl{0%{box-shadow:0 0 0 0 rgba(26,115,232,.6)}100%{box-shadow:0 0 0 22px rgba(26,115,232,0)}}
+.ab{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;border:3px solid #fff}
+.em{font-size:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+#tools{position:fixed;z-index:900;right:10px;top:calc(142px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px}#zi,#zo{display:none}
+#tools button{width:44px;height:44px;padding:0;font-size:19px;border:0;background:var(--surf);color:var(--ink);box-shadow:var(--sd)}
+#toast{position:fixed;z-index:4000;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,160px);background:#323232;color:#fff;padding:12px 18px;border-radius:8px;transition:transform .3s;max-width:90vw}#toast.on{transform:translate(-50%,0)}
+.leaflet-top.leaflet-right .leaflet-control-attribution{margin:110px 0 0;font-size:10px;max-width:70vw;background:rgba(255,255,255,.8);color:#333}.leaflet-control-attribution a{color:#1a73e8}.draw{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+label{display:block;font-size:13px;color:var(--mut)}label select,label input{margin-top:4px}label.ck{display:flex;gap:10px;align-items:center;color:var(--ink);font-size:15px}label.ck input{width:20px;height:20px;margin:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.stats div{background:var(--in);border-radius:12px;padding:9px 4px;text-align:center}.stats b{display:block;font-size:15px}.stats small{color:var(--mut);font-size:11.5px}
+a.btn{display:inline-block;text-decoration:none;color:var(--acc);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-weight:500}.links{display:flex;gap:6px;flex-wrap:wrap}#elev svg{border-radius:12px;background:var(--in);display:block}a{color:var(--acc)}
+#ban,#nv,.mbox{background:var(--surf);box-shadow:var(--sd)}
+#ban{position:fixed;z-index:1500;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom));max-width:440px;margin:auto;border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center}#ban p{margin:0;flex:1;font-size:14px}#ban .logo{width:36px;height:36px;border-radius:9px}
+#nv{position:fixed;z-index:1600;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top));max-width:460px;margin:auto;border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center}
+#nva{font-size:36px;line-height:1;width:54px;height:54px;border-radius:12px;background:#188038;color:#fff;display:grid;place-items:center;flex:none}#nvt{flex:1;min-width:0}#nvt b{display:block;font-size:17px}#nvt small{color:var(--mut)}
+.modal{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:14px;background:rgba(0,0,0,.5)}
+.mbox{width:min(560px,100%);max-height:92dvh;display:flex;flex-direction:column;border-radius:24px;overflow:hidden}.mbox h2{margin:0;padding:20px 22px 6px;font-weight:500}.mscroll{overflow:auto;padding:0 22px;font-size:14px;flex:1}.mscroll h3{margin:14px 0 4px}.mfoot{padding:14px 22px 20px;display:flex;flex-direction:column;gap:10px}
+@media(min-width:820px){
+#tabs{top:0;right:auto;bottom:0;width:72px;height:auto;flex-direction:column;justify-content:flex-start;gap:14px;padding:84px 0 0;border-top:0;border-right:1px solid var(--line)}
+#panel{left:72px;top:0;bottom:0;width:360px;height:auto!important;border-radius:0;box-shadow:2px 0 8px rgba(60,64,67,.3);padding-top:66px}#grip{display:none}header{padding-top:8px}
+#top{display:contents}#sb{position:fixed;z-index:1100;left:84px;top:12px;width:336px}#qr{position:fixed;z-index:1100;left:84px;top:66px;width:336px}
+.chips{position:fixed;z-index:1050;left:444px;top:8px;right:140px;padding-top:12px}
+#tools{top:70px}#zi,#zo{display:block}.leaflet-top.leaflet-right .leaflet-control-attribution{margin:0}#nv,#ban{left:444px;right:auto;margin:0;width:420px}#ban{bottom:16px}#toast{bottom:24px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+body.nav #top,body.nav #tabs,body.nav #panel,body.nav #tools,body.nav #ban,body.nav .leaflet-control-container{display:none!important}
+#navui{position:fixed;inset:0;z-index:1700;pointer-events:none}#navui>*{pointer-events:auto}
+#ntop{position:absolute;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top));max-width:520px;margin:auto;border-radius:22px;background:linear-gradient(135deg,#188038,#0f9d58);color:#fff;padding:14px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+#nta{font-size:54px;line-height:1;width:64px;text-align:center}#ntt{flex:1;min-width:0}#nti{font-size:19px;font-weight:600;line-height:1.2}#nti b{display:block;font-size:34px}#ntn{margin-top:4px;opacity:.9;font-size:14px}
+#nspd{position:absolute;left:12px;bottom:calc(132px + env(safe-area-inset-bottom));width:70px;height:70px;border-radius:50%;background:var(--surf);box-shadow:var(--sd);display:grid;place-content:center;text-align:center;line-height:1;border:4px solid var(--line)}#nspd b{font-size:24px}#nspd small{font-size:10px;color:var(--mut)}#nspd.over{border-color:#d93025;background:#fce8e6;color:#d93025}
+#nlim{position:absolute;left:21px;bottom:calc(210px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:#fff;border:6px solid #d93025;display:grid;place-items:center;color:#000;font-weight:800;font-size:19px;box-shadow:var(--sd)}
+#nrep{position:absolute;right:12px;bottom:calc(132px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surf);padding:8px;border-radius:18px;box-shadow:var(--sd)}#nrep button{display:flex;flex-direction:column;align-items:center;font-size:24px;border-radius:14px;padding:8px 10px;color:var(--ink)}#nrep small{font-size:11px}
+#nbar{position:absolute;left:0;right:0;bottom:0;background:var(--surf);border-radius:22px 22px 0 0;padding:14px 14px calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;box-shadow:0 -4px 20px rgba(0,0,0,.3);flex-wrap:wrap}
+.nb1{flex:1;text-align:center;min-width:64px}.nb1 b{display:block;font-size:21px;color:#188038}.nb1 small{color:var(--mut)}
+#nbar button{width:44px;height:44px;padding:0;border-radius:50%;font-size:19px;color:var(--ink)}#nvx{background:#d93025!important;color:#fff!important;border-color:#d93025!important}#nattr{flex-basis:100%;text-align:center;font-size:10px;color:var(--mut)}
+#map.rot{inset:-25%;transition:transform .5s linear;will-change:transform}
+#map.rot .em,#map.rot .ab{transform:rotate(var(--hd,0deg))}#map.rot .pin i{transform:rotate(calc(-45deg + var(--hd,0deg)))}
+.car{transition:transform .4s linear}body.nav #toast{bottom:calc(160px + env(safe-area-inset-bottom))}
+@media(min-width:820px){#ntop{left:16px;right:auto;margin:0;width:460px}}
+#sbS{display:none}#acb.on{background:var(--acc);color:var(--onacc);font-weight:700;font-size:16px}
+.rpg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.rpg button{display:flex;flex-direction:column;align-items:center;font-size:28px;border-radius:16px;padding:10px;color:var(--ink)}.rpg small,#nrep small{font-size:12px}
+.leaflet-popup-content button{padding:4px 10px;font-size:13px;margin:4px 4px 0 0}.mscroll label{margin-top:10px}.mscroll .row{margin-top:10px}
+.plg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pl{background:var(--in);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px}.plh{font-size:24px}.pl .row{margin-top:6px}.pl button{padding:6px 12px}
+.pl2{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}.pl2 button{padding:6px 10px}#svc{flex-wrap:wrap;overflow:visible}#qa{padding-top:0}
+</style></head>
+<body>
+<div id="map"></div>
+<div id="tools"><button id="zi" aria-label="Zoom avant">＋</button><button id="zo" aria-label="Zoom arrière">－</button><button id="loc" aria-label="Ma position">◎</button><button id="bc" aria-label="Changer de fond de carte">🗺</button><button id="ms" aria-label="Mesurer une distance">📏</button><button id="fs" aria-label="Plein écran">⛶</button><button id="rpb" aria-label="Signaler">🚨</button></div>
+<div id="toast" role="status"></div>
+<div id="top"><div id="sb"><img class="logo" src="favicon.svg" alt=""><input id="q" type="search" placeholder="Rechercher sur TalcoMap" autocomplete="off" enterkeyhint="search"><button id="mic" aria-label="Recherche vocale" hidden>🎤</button><button id="acb" aria-label="Compte" title="Compte">👤</button><button id="sbS" aria-label="Réglages">⚙️</button></div><div id="qr" class="ac"></div><div class="chips" id="chips"></div></div>
+<nav id="tabs"><button data-t="explore" class="on"><i>🧭</i>Explorer</button><button data-t="route"><i>🚗</i>Trajet</button><button data-t="transit"><i>🚌</i>Horaires</button><button data-t="saved"><i>⭐</i>Mes lieux</button><button data-t="set"><i>⚙️</i>Réglages</button></nav>
+<aside id="panel" class="mid">
+<div id="grip" aria-label="Déplacer le panneau"></div>
+<header><h1 id="ttl">Explorer</h1><button id="inst" hidden>Installer</button></header>
+<div class="body">
+<section id="t-explore">
+<div class="chips" id="qa"></div>
+<div id="place" hidden></div>
+<label class="ck"><input type="checkbox" id="onlyOpen"> Ouverts maintenant</label>
+<div id="sl"><p class="mut">Choisissez une catégorie en haut, ou cherchez un lieu.</p></div>
+</section>
+<section id="t-route" hidden>
+<div class="chips" id="hw"></div>
+<div class="fld"><input id="ra" placeholder="Départ" autocomplete="off"><button id="ga" aria-label="Ma position">◎</button><button id="pa" aria-label="Choisir sur la carte">📌</button></div><div id="rac" class="ac"></div>
+<div class="fld"><input id="rb" placeholder="Arrivée" autocomplete="off"><button id="pb" aria-label="Choisir sur la carte">📌</button></div><div id="rbc" class="ac"></div>
+<div class="row"><button id="sw">⇅ Inverser</button><input type="datetime-local" id="when" title="Heure de départ (transports)" style="flex:1"><button id="go" class="pri">Calculer</button></div>
+<div id="cards"></div><p class="mut" id="tmsg"></p><div id="det"></div>
+</section>
+<section id="t-transit" hidden>
+<input id="tq" type="search" placeholder="Arrêt ou gare (ex. République, Part-Dieu…)" autocomplete="off">
+<div id="tqr" class="ac"></div>
+<div class="row"><button class="pri" id="tNear">📍 Autour de moi</button><button id="tHome">🏠 Domicile</button><button id="tWork">💼 Travail</button></div>
+<div id="tl"><p class="mut">Horaires en direct des bus, tramways, métros et trains. Cherchez un arrêt, ou touchez « Autour de moi ».</p></div>
+</section>
+<section id="t-saved" hidden><div id="fav"></div><div id="trips"></div><div id="hist"></div></section>
+<section id="t-set" hidden>
+<label>Thème<select id="s-theme"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+<label>Fond de carte<select id="s-base"><option value="osm">OpenStreetMap</option><option value="voyager">Voyager (clair, moderne)</option><option value="light">Clair épuré</option><option value="dark">Sombre</option><option value="street">Rues (Esri)</option><option value="cyclo">CyclOSM (vélo)</option><option value="topo">Relief (OpenTopoMap)</option><option value="etopo">Relief (Esri)</option><option value="sat">Satellite</option></select></label>
+<label>Unités<select id="s-unit"><option value="km">Kilomètres</option><option value="mi">Miles</option></select></label>
+<p class="mut">Couches superposées</p>
+<label class="ck"><input type="checkbox" data-o="opnv"> Lignes de transport</label>
+<label class="ck"><input type="checkbox" data-o="cyc"> Itinéraires vélo</label>
+<label class="ck"><input type="checkbox" data-o="hike"> Sentiers de randonnée</label>
+<label class="ck"><input type="checkbox" data-o="rail"> Réseau ferré</label>
+<label class="ck"><input type="checkbox" id="s-follow"> Suivre ma position en continu</label>
+<div class="row"><label style="flex:1">Conso (L/100 km)<input id="s-cons" type="number" step="0.1" min="1"></label><label style="flex:1">Prix du litre (€)<input id="s-price" type="number" step="0.01" min="0"></label></div>
+<div class="row"><button id="s-acc">👤 Compte</button><button id="s-inst">Installer l'application</button><button id="s-legal">Mentions légales &amp; cookies</button><button id="s-clear">Effacer mes données</button></div>
+<p class="mut">Cartes © contributeurs <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Itinéraires : OSRM (routing.openstreetmap.de) · Transports : <a href="https://transitous.org/sources/">Transitous</a> · Recherche : Nominatim · Services : Overpass. Contact : <a href="mailto:contact@talcomap.example">contact@talcomap.example</a> (à remplacer par ton adresse).</p>
+</section>
+</div></aside>
+<div class="modal" id="legal" hidden role="dialog" aria-modal="true" aria-labelledby="lt"><div class="mbox">
+<h2 id="lt">Avant de commencer</h2>
+<div class="mscroll">
+<p class="mut">Dernière mise à jour : 17 novembre 2026. Ces règles s'appliquent à TalcoMap et aux services associés TalcoAdministration, TalcoINT, Talco-IT-Networks et TalcoINC2026.</p>
+<h3>1. Éditeur et mentions légales</h3>
+<p>Éditeur : TalcoINC2026 (avec TalcoAdministration, TalcoINT et Talco-IT-Networks). Adresse, forme juridique, numéro d'immatriculation, directeur de la publication : <i>[à compléter]</i>. Contact : <i>[adresse e-mail à compléter]</i>. Hébergeur : <i>[à compléter]</i>. Les comptes administrateurs sont ceux d'Anton et de Talco.</p>
+<h3>2. Objet du service</h3>
+<p>TalcoMap affiche une carte, calcule des itinéraires (voiture, vélo, marche, transports), propose un guidage, des services à proximité, et un compte facultatif pour enregistrer vos lieux et trajets et partager des signalements. L'accès à la carte est libre, sans compte.</p>
+<h3>3. Compte</h3>
+<p>Le compte se crée avec un pseudo (3 à 20 caractères) et un mot de passe. Il est réservé aux personnes de 15 ans ou plus. Vous êtes responsable de la confidentialité de votre mot de passe. Aucune adresse e-mail réelle n'est demandée : en cas d'oubli, le mot de passe ne peut pas être récupéré par e-mail.</p>
+<h3>4. Signalements (contrôleurs, police, accidents…)</h3>
+<p>Les signalements sont visibles par tous les visiteurs, avec votre pseudo, la position, le type et l'heure. Ils expirent automatiquement à l'affichage (de 1 h à 24 h selon le type). Vous vous engagez à ne signaler que des faits réels et actuels, sans propos injurieux, sans donnée personnelle sur des tiers et sans détournement. Les signalements sont indicatifs et peuvent être inexacts. Dans certains pays, dont la France, la diffusion d'informations sur les contrôles routiers est encadrée par la loi : l'éditeur peut désactiver à tout moment les alertes police, contrôleurs et radars, ou se conformer à toute demande des autorités. Vous êtes responsable des signalements que vous publiez.</p>
+<h3>5. Modération et suspension</h3>
+<p>Les administrateurs peuvent supprimer tout signalement et suspendre un compte, avec suppression de ses données et signalements, notamment en cas d'abus, de faux signalements, de harcèlement ou de contenu illicite. Un compte suspendu ne peut plus se connecter ni publier.</p>
+<h3>6. Sécurité routière et responsabilité</h3>
+<p>Le guidage et les temps de trajet sont des estimations. Respectez le code de la route et la signalisation réelle, ne manipulez pas le téléphone en conduisant. Les données cartographiques peuvent comporter des erreurs. Le service est fourni sans garantie de disponibilité, et l'éditeur n'est pas responsable des dommages résultant de son usage, dans les limites permises par la loi.</p>
+<h3>7. Données personnelles</h3>
+<p>Responsable du traitement : TalcoINC2026 (coordonnées ci-dessus). Données traitées : pseudo, identifiant technique, mot de passe (stocké chiffré par Firebase Authentication, jamais lisible par l'éditeur), favoris, domicile, travail, trajets enregistrés, signalements (type, position, heure, pseudo), votes de confirmation, état de suspension, journaux techniques. Votre position GPS n'est utilisée que sur action de votre part (bouton de localisation, guidage, signalement) et n'est conservée que si vous publiez un signalement ou enregistrez un lieu.</p>
+<p>Finalités et bases légales : fournir le compte et la synchronisation (exécution du service) ; afficher les signalements et modérer (intérêt légitime de sécurité et de qualité) ; mesure d'audience (consentement, facultatif). Destinataires : Google Firebase (authentification, base de données, éventuellement Analytics), avec des transferts possibles hors Union européenne encadrés par les garanties de Google ; les services cartographiques listés au point 9 reçoivent vos requêtes techniques. Aucune vente de données.</p>
+<p>Durées : compte et données synchronisées jusqu'à suppression du compte ; signalements supprimés au plus tard à la prochaine connexion de leur auteur ou d'un administrateur après 24 h ; cache et préférences jusqu'à effacement des données du site. Vos droits : accès, rectification, effacement, portabilité, opposition, limitation, et retrait du consentement à tout moment. Dans l'application : Compte → Exporter mes données, Supprimer mon compte, et Réglages pour les cookies. Réclamation possible auprès de la CNIL (cnil.fr).</p>
+<h3>8. Cookies et stockage local</h3>
+<p><b>Indispensables</b> (sans consentement) : « talcomap » (préférences, favoris, récents, domicile, travail, trajets, stockage local, jusqu'à effacement) ; « talcomap-consent » (votre choix, jusqu'à nouvelle version de ces règles) ; session Firebase Authentication (IndexedDB « firebaseLocalStorageDb », tant que vous êtes connecté) ; cache hors ligne de l'application et des tuiles de carte (service worker).</p>
+<p><b>Facultatifs</b> (uniquement si vous cochez la case ci-dessous) : mesure d'audience Google Analytics, cookies « _ga » et « _ga_G-PJBNGP9VG1 », durée maximale de 13 mois. Sans votre accord, aucun cookie de mesure n'est déposé. Vous pouvez changer d'avis dans Réglages → Mentions légales &amp; cookies, et effacer les cookies depuis votre navigateur. Aucun cookie publicitaire n'est utilisé.</p>
+<h3>9. Services tiers</h3>
+<p>Fonds de carte © contributeurs OpenStreetMap (licence ODbL), CyclOSM, OpenTopoMap, CARTO, Esri ; itinéraires OSRM (routing.openstreetmap.de) ; transports Transitous ; recherche Nominatim ; services Overpass ; météo et altitude Open-Meteo ; vols récents OpenSky ; Wikipédia ; Google Firebase. Ces services voient votre adresse IP et appliquent leurs propres politiques.</p>
+<h3>10. Propriété intellectuelle</h3>
+<p>Le code et le design de TalcoMap appartiennent à l'éditeur. Les données cartographiques restent soumises à leurs licences respectives. Vous conservez vos droits sur vos contenus et accordez à l'éditeur le droit de les afficher dans le service.</p>
+<h3>11. Modification et droit applicable</h3>
+<p>Ces règles peuvent évoluer ; en cas de changement important, votre acceptation sera redemandée. Elles sont soumises au droit français ; tout litige relève des tribunaux compétents, sous réserve des droits des consommateurs.</p>
+</div>
+<div class="mfoot"><label class="ck"><input type="checkbox" id="lck"> J'ai lu et j'accepte les mentions légales, les conditions d'utilisation, la politique de confidentialité et la politique de cookies</label><label class="ck"><input type="checkbox" id="lan"> J'autorise la mesure d'audience (Google Analytics), facultatif</label><button class="pri" id="lok" disabled>Continuer</button><button id="lno">Refuser</button></div></div></div>
+<div class="modal" id="accm" hidden role="dialog" aria-modal="true" aria-labelledby="act"><div class="mbox"><h2 id="act">Compte</h2><div class="mscroll" id="acbody"></div><div class="mfoot"><button id="acx">Fermer</button></div></div></div>
+<div class="modal" id="rpm" hidden role="dialog" aria-modal="true"><div class="mbox"><h2>Signaler</h2><div class="mscroll"><p class="mut">Position : GPS si disponible, sinon centre de la carte. Ne signalez que des faits réels et actuels.</p><div id="rpg" class="rpg"></div></div><div class="mfoot"><button id="rpx">Annuler</button></div></div></div>
+<div class="modal" id="svm" hidden role="dialog" aria-modal="true"><div class="mbox"><h2>Enregistrer ce lieu</h2><div class="mscroll"><label>Nom<input id="svn" maxlength="40"></label><p class="mut" style="margin-top:12px">Catégorie</p><div class="chips" id="svc"></div></div><div class="mfoot"><button class="pri" id="svok">Enregistrer</button><button id="svd" style="color:#d93025" hidden>Supprimer ce lieu</button><button id="svx">Annuler</button></div></div></div>
+<div id="navui" hidden>
+<div id="ntop"><div id="nta">⬆</div><div id="ntt"><div id="nti">…</div><div id="ntn"></div></div></div>
+<div id="nspd"><b id="nsv">0</b><small>km/h</small></div><div id="nlim" hidden><b id="nlv"></b></div>
+<div id="nrep" hidden></div>
+<div id="nbar"><div class="nb1"><b id="neta">--:--</b><small>arrivée</small></div><div class="nb1"><b id="nrt">--</b><small>restant</small></div><div class="nb1"><b id="nrd">--</b><small>distance</small></div><button id="nvv" aria-label="Voix">🔊</button><button id="nsm" aria-label="Signaler">🚨</button><button id="nfr" aria-label="Vue libre">🔓</button><button id="nvx" aria-label="Quitter le guidage">✕</button><small id="nattr">© OpenStreetMap contributors</small></div>
+</div>
+<div id="ban" hidden><img class="logo" src="favicon.svg" alt=""><p id="bt"><b>Installer TalcoMap</b><br><span class="mut" id="bs">Accès direct depuis l'écran d'accueil, même hors ligne.</span></p><button class="pri" id="bi">Installer</button><button id="bx" aria-label="Fermer">✕</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* Cette appli ne s'ouvre que dans le login commun (https://natlacaxi.github.io/carte/). */
+const PARENT='https://natlacaxi.github.io';
+(function(){let ok=window.parent!==window;try{const ao=location.ancestorOrigins;if(ok&&ao&&ao.length)ok=ao[0]===PARENT}catch(e){}
+if(!ok){location.replace(PARENT+'/carte/');throw new Error('hors cadre')}})();
+const post=m=>{try{parent.postMessage(m,PARENT)}catch(e){}};
+addEventListener('error',e=>post({type:'talco-error',message:String(e.message||'erreur')}));
+addEventListener('unhandledrejection',e=>post({type:'talco-error',message:String((e.reason&&(e.reason.message||e.reason.code))||e.reason||'erreur')}));
+addEventListener('message',async e=>{if(e.origin!==PARENT||e.source!==parent)return;const m=e.data||{};
+if((m.type==='talco-login'||m.type==='exchange-login')&&typeof m.email==='string'&&typeof m.password==='string'){
+try{if(!FB)await fbStart();const a=FB.auth;if(a.currentUser&&a.currentUser.email!==m.email)await FB.au.signOut(a);if(!a.currentUser)await FB.au.signInWithEmailAndPassword(a,m.email,m.password)}
+catch(x){post({type:'talco-login-error',code:x&&x.code,message:x&&x.message})}}
+else if(m.type==='talco-install-ready'){dp={prompt:()=>post({type:'talco-install'}),userChoice:Promise.resolve({})};$('#inst').hidden=false}
+else if(m.type==='talco-installed'){dp=null;$('#inst').hidden=true}});
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S={fav:[],hist:[],theme:'auto',unit:'km',base:'osm',ov:[],cons:6.5,price:1.85};
+try{Object.assign(S,JSON.parse(localStorage.getItem('talcomap')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('talcomap',JSON.stringify(S))}catch(e){}if(typeof cloudPush==='function')cloudPush()};
+const NOM='https://nominatim.openstreetmap.org';
+const fd=m=>S.unit==='mi'?(m/1609.34).toFixed(1)+' mi':m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km';
+const fdur=s=>{const m=Math.max(1,Math.round(s/60));return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')};
+const hm=i=>new Date(i).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'});
+let tt;const toast=t=>{const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),3200)};
+const theme=()=>document.documentElement.dataset.theme=S.theme;theme();
+
+/* Carte */
+const map=L.map('map',{zoomControl:false,attributionControl:false}).setView([46.6,2.4],6);
+L.control.attribution({position:'topright',prefix:false}).addTo(map);
+L.control.scale({imperial:true,position:'bottomright'}).addTo(map);
+const B={osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap',19],voyager:['https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png','© OpenStreetMap, © CARTO',20,'abcd'],light:['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','© OpenStreetMap, © CARTO',20,'abcd'],cyclo:['https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png','© OpenStreetMap, CyclOSM',20],topo:['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png','© OpenStreetMap, SRTM, OpenTopoMap',17],etopo:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}','Cartes © Esri',19],street:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}','Cartes © Esri',19],sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}','Imagerie © Esri',19],dark:['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png','© OpenStreetMap, © CARTO',20,'abcd']};
+const O={opnv:['https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png','ÖPNVKarte'],cyc:['https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png','Waymarked Trails'],hike:['https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png','Waymarked Trails'],rail:['https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png','OpenRailwayMap']};
+let bl,ol={};
+const isDark=()=>S.theme==='dark'||(S.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
+let forceOsm=0,terr=0,tT=0;
+function setBase(k){if(!B[k]){k='osm';S.base='osm'}if(k==='osm'&&isDark()&&!forceOsm)k='dark';bl&&map.removeLayer(bl);const d=B[k],key=k;bl=L.tileLayer(d[0],{attribution:d[1],maxZoom:20,maxNativeZoom:d[2],subdomains:d[3]||'abc'}).addTo(map);bl.bringToBack();
+bl.on('tileerror',()=>{terr++;clearTimeout(tT);tT=setTimeout(()=>terr=0,6000);if(terr>=8&&key!=='osm'){terr=0;forceOsm=1;S.base='osm';setBase('osm');const e=$('#s-base');e&&(e.value='osm');toast('Ce fond de carte ne répond pas : retour à OpenStreetMap')}})}
+function setOv(){for(const k in O){const on=S.ov.includes(k);if(on&&!ol[k])ol[k]=L.tileLayer(O[k][0],{attribution:O[k][1],maxZoom:19,opacity:.85}).addTo(map);if(!on&&ol[k]){map.removeLayer(ol[k]);delete ol[k]}}}
+setBase(S.base);setOv();
+$('#zi').onclick=()=>map.zoomIn();$('#zo').onclick=()=>map.zoomOut();
+
+/* Panneau */
+function tab(t){$$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('section').forEach(s=>s.hidden=s.id!=='t-'+t);$('#ttl').textContent={explore:'Explorer',route:'Itinéraire',transit:'Horaires',saved:'Mes lieux',set:'Réglages'}[t];if($('#panel').classList.contains('min'))sheet('mid')}
+$('#tabs').onclick=e=>{const b=e.target.closest('button');b&&tab(b.dataset.t)};
+
+const pad=()=>innerWidth>=820?{paddingTopLeft:[470,90],paddingBottomRight:[70,40]}:{paddingTopLeft:[20,150],paddingBottomRight:[20,$('#panel').offsetHeight+80]};
+
+/* Recherche */
+function ac(inp,box,pick){let t;inp.addEventListener('input',()=>{clearTimeout(t);const q=inp.value.trim();if(q.length<3){box.innerHTML='';return}t=setTimeout(async()=>{try{const r=await(await fetch(NOM+'/search?format=jsonv2&extratags=1&limit=6&accept-language=fr&q='+encodeURIComponent(q))).json();box.innerHTML=r.map((p,i)=>`<button data-i="${i}"><b>${esc(p.name||p.display_name.split(',')[0])}</b><small>${esc(p.display_name)}</small></button>`).join('')||'<p class="mut">Aucun résultat</p>';box.onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=r[b.dataset.i];box.innerHTML='';pick({lat:+p.lat,lon:+p.lon,name:p.name||p.display_name.split(',')[0],sub:p.display_name,x:p.extratags})}}catch(e){box.innerHTML='<p class="mut">Recherche indisponible (hors ligne ?)</p>'}},350)})}
+async function rev(ll){try{const j=await(await fetch(`${NOM}/reverse?format=jsonv2&extratags=1&accept-language=fr&lat=${ll.lat}&lon=${ll.lng}`)).json();const a=j.address||{};return{lat:ll.lat,lon:ll.lng,name:j.name||a.road||a.village||a.town||a.city||'Lieu choisi',sub:j.display_name,x:j.extratags}}catch(e){return{lat:ll.lat,lon:ll.lng,name:'Lieu choisi'}}}
+const pin=()=>L.divIcon({className:'pin',html:'<i></i>',iconSize:[30,40],iconAnchor:[15,40]});
+let pm,cur,rt={a:null,b:null},pick=null;
+function showPlace(p,fromSearch){pm&&map.removeLayer(pm);cur=p;pm=L.marker([p.lat,p.lon],{icon:pin()}).addTo(map);fly([p.lat,p.lon],Math.max(map.getZoom(),15));
+if(fromSearch){S.hist=[p,...S.hist.filter(h=>h.name!==p.name)].slice(0,8);save();renderSaved()}
+tab('explore');const e=$('#place'),isF=S.fav.some(f=>f.lat===p.lat&&f.lon===p.lon);e.hidden=false;
+e.innerHTML=`<h3>${esc(p.name)}</h3><p class="mut">${esc(p.sub||p.lat.toFixed(5)+', '+p.lon.toFixed(5))}</p>${xtra(p)}<p class="mut" id="wx"></p><div class="row" style="margin-top:8px"><button class="pri" id="pTo">Y aller</button><button id="pFrom">Partir d'ici</button><button id="pFav" aria-label="Favori">${isF?'★':'☆'}</button><button id="pSh">Partager</button><button id="pDep">🚉 Horaires</button><button id="pCp">Copier coord.</button><button id="pHome" aria-label="Définir comme domicile">🏠</button><button id="pWork" aria-label="Définir comme travail">💼</button></div><div id="dep"></div><div id="air"></div>`;
+$('#pTo').onclick=()=>{tab('route');setPt('b',p,0);if(!rt.a)locate(m=>{setPt('a',m,0);calc()});else calc()};
+$('#pFrom').onclick=()=>{setPt('a',p);tab('route')};
+$('#pFav').onclick=()=>openSave(p);
+$('#pSh').onclick=()=>share(location.origin+location.pathname+`#p=${p.lat.toFixed(5)},${p.lon.toFixed(5)}`);$('#pHome').onclick=()=>setHW('home',p);$('#pWork').onclick=()=>setHW('work',p);$('#pCp').onclick=()=>{navigator.clipboard?.writeText(`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`);toast('Coordonnées copiées')};$('#pDep').onclick=()=>openTransit(p);wx(p);air(p)}
+async function share(u){try{if(navigator.share)return await navigator.share({title:'TalcoMap',url:u});await navigator.clipboard.writeText(u);toast('Lien copié')}catch(e){}}
+ac($('#q'),$('#qr'),p=>{$('#q').value='';showPlace(p,true)});
+map.on('click',async e=>{const ll=e.latlng;if(pick){const k=pick;pick=null;setPt(k,await rev(ll));sheet('mid');return}if(meas){addM(ll);return}if(!$('#t-route').hidden)return;showPlace(await rev(ll))});
+
+/* Position */
+let mc;function locate(cb){if(!navigator.geolocation)return toast('Géolocalisation non supportée');navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];mc&&map.removeLayer(mc);mc=L.layerGroup([L.circle(ll,{radius:p.coords.accuracy,weight:1,color:'#2563eb',fillOpacity:.1}),L.marker(ll,{icon:L.divIcon({className:'me',html:'<i></i>',iconSize:[18,18]})})]).addTo(map);if(cb)cb({lat:ll[0],lon:ll[1],name:'Ma position'});else map.flyTo(ll,16)},()=>toast('Position refusée ou indisponible'),{enableHighAccuracy:true,timeout:10000})}
+$('#loc').onclick=()=>locate();
+
+/* Services (Overpass) */
+const SV=[['🍽️','Restaurants','amenity=restaurant'],['☕','Cafés','amenity=cafe'],['🥖','Boulangeries','shop=bakery'],['🛒','Supermarchés','shop=supermarket'],['💊','Pharmacies','amenity=pharmacy'],['🏥','Hôpitaux','amenity=hospital'],['⛽','Carburant','amenity=fuel'],['🔌','Recharge VE','amenity=charging_station'],['🅿️','Parkings','amenity=parking'],['🏧','Distributeurs','amenity=atm'],['🏨','Hôtels','tourism=hotel'],['🚻','Toilettes','amenity=toilets'],['🚉','Gares','railway=station'],['🚲','Vélos partagés','amenity=bicycle_rental'],['🌳','Parcs','leisure=park'],['🏛️','Musées','tourism=museum'],['🍺','Bars','amenity=bar'],['🍔','Fast-food','amenity=fast_food'],['🎬','Cinémas','amenity=cinema'],['🛫','Aéroports','aeroway=aerodrome'],['🚌','Arrêts de bus','highway=bus_stop'],['🚇','Métro','station=subway'],['🏋️','Salles de sport','leisure=fitness_centre'],['🛍️','Supérettes','shop=convenience']];
+$('#chips').innerHTML=SV.map((s,i)=>`<button data-i="${i}">${s[0]} ${s[1]}</button>`).join('');
+const sg=L.layerGroup().addTo(map);
+const OV=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+$('#chips').onclick=e=>{const b=e.target.closest('button');if(!b)return;$$('#chips button').forEach(x=>x.classList.toggle('on',x===b));runSv(SV[b.dataset.i])};
+async function runSv(s){tab('explore');$('#place').hidden=true;sg.clearLayers();$('#sl').innerHTML='<div class="load"></div>';sheet('mid');
+let c=map.getCenter();const z=map.getZoom();
+if(z<12){const h=await here();if(!h){$('#sl').innerHTML='<p class="mut">Zoomez sur la zone voulue, ou autorisez la position pour chercher autour de vous.</p>';return}c=L.latLng(h.lat,h.lon);fly(c,14)}
+const r=z<14?1500:Math.round(Math.min(5000,Math.max(500,map.getBounds().getNorthEast().distanceTo(c)*.9)));
+const q=`[out:json][timeout:25];nwr[${s[2]}](around:${r},${c.lat},${c.lng});out center 100;`;let j=null;
+for(const u of OV){try{const rs=await fetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)});if(rs.ok){j=await rs.json();break}}catch(e){}}
+if(!j){$('#sl').innerHTML='<p class="mut">Service momentanément indisponible, réessayez dans un instant.</p>';return}
+const L2=j.elements.map(x=>({lat:x.lat??x.center?.lat,lon:x.lon??x.center?.lon,x:x.tags,name:x.tags?.name||s[1].replace(/s$/,''),sub:x.tags?.['addr:street']||''})).filter(x=>x.lat).map(x=>({...x,d:c.distanceTo([x.lat,x.lon])})).sort((a,b)=>a.d-b.d);
+const F=$('#onlyOpen').checked?L2.filter(x=>ost(x.x?.opening_hours)?.open):L2;
+F.forEach(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:`<div class="em">${s[0]}</div>`,iconSize:[26,26]})}).on('click',()=>showPlace(x)).addTo(sg));
+$('#sl').innerHTML=`<h3>${s[0]} ${s[1]}</h3><p class="mut">${F.length} résultat${F.length>1?'s':''} autour de ${c.distanceTo(map.getCenter())<50?'ce point':'vous'}</p>`+(F.length?F.slice(0,40).map((x,i)=>`<button class="item" data-i="${i}"><b>${esc(x.name)}</b><small>${fd(x.d)}${ob(x)}${x.sub?' · '+esc(x.sub):''}</small></button>`).join(''):'<p class="mut">Rien trouvé ici.</p>');
+$('#sl').onclick=ev=>{const k=ev.target.closest('.item');k&&showPlace(F[k.dataset.i])};
+if(F.length)map.fitBounds(L.latLngBounds(F.slice(0,40).map(x=>[x.lat,x.lon]).concat([[c.lat,c.lng]])),{...pad(),maxZoom:17})}
+
+/* Itinéraires */
+const M={car:['🚗','routed-car','#1a73e8','Voiture'],bike:['🚲','routed-bike','#16a34a','Vélo'],foot:['🚶','routed-foot','#2563eb','Marche'],transit:['🚆',null,'#7c3aed','Transport']};
+let res={},mode='car',rg=L.layerGroup().addTo(map);
+function setPt(k,p,auto=1){rt[k]=p;$(k==='a'?'#ra':'#rb').value=p.name;if(auto&&rt.a&&rt.b)calc()}
+ac($('#ra'),$('#rac'),p=>setPt('a',p));ac($('#rb'),$('#rbc'),p=>setPt('b',p));
+$('#ga').onclick=()=>locate(m=>setPt('a',m));
+$('#pa').onclick=()=>{pick='a';toast('Touchez la carte pour le départ');sheet('min')};
+$('#pb').onclick=()=>{pick='b';toast("Touchez la carte pour l'arrivée");sheet('min')};
+$('#sw').onclick=()=>{[rt.a,rt.b]=[rt.b,rt.a];$('#ra').value=rt.a?.name||'';$('#rb').value=rt.b?.name||'';rt.a&&rt.b&&calc()};
+$('#go').onclick=()=>calc(1);
+const dec=(s,p=6)=>{let i=0,la=0,lo=0,o=[],f=10**p;while(i<s.length){for(let k=0;k<2;k++){let b,sh=0,r=0;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=r&1?~(r>>1):r>>1;k?lo+=d:la+=d}o.push([la/f,lo/f])}return o};
+let cid=0,tErr='';
+const here=()=>new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(q=>r({lat:q.coords.latitude,lon:q.coords.longitude,name:'Ma position'}),()=>r(null),{timeout:8000,enableHighAccuracy:true}):r(null));
+async function resolve(k){const v=$(k==='a'?'#ra':'#rb').value.trim();if(!v||(rt[k]&&rt[k].name===v))return;try{const r=await(await fetch(NOM+'/search?format=jsonv2&limit=1&accept-language=fr&q='+encodeURIComponent(v))).json();if(r[0])rt[k]={lat:+r[0].lat,lon:+r[0].lon,name:v,sub:r[0].display_name};else rt[k]=null}catch(e){}}
+async function calc(manual){if(manual){$('#go').disabled=true;await Promise.all([resolve('a'),resolve('b')]);$('#go').disabled=false;if(!$('#ra').value.trim()){const h=await here();if(h){rt.a=h;$('#ra').value='Ma position'}}}
+if(!rt.a||!rt.b)return toast('Choisissez un départ et une arrivée');const id=++cid;
+$('#cards').innerHTML='<div class="load"></div>';$('#det').innerHTML='';res={};tErr='';$('#tmsg').textContent='';const c=`${rt.a.lon},${rt.a.lat};${rt.b.lon},${rt.b.lat}`;
+await Promise.all([...['car','bike','foot'].map(async m=>{try{const j=await(await fetch(`https://routing.openstreetmap.de/${M[m][1]}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`)).json();if(j.routes?.[0])res[m]=j.routes[0]}catch(e){}}),
+(async()=>{try{const t=$('#when').value?new Date($('#when').value):new Date(),rs=await fetch(`https://api.transitous.org/api/v5/plan?fromPlace=${rt.a.lat},${rt.a.lon}&toPlace=${rt.b.lat},${rt.b.lon}&time=${t.toISOString()}&numItineraries=5&maxPreTransitTime=3600&maxPostTransitTime=3600`),j=await rs.json();if(j.itineraries?.length)res.transit=j.itineraries;else tErr=j.error||(rs.ok?"Aucune correspondance trouvée (zone non couverte ou trop loin d'un arrêt).":'Erreur du service ('+rs.status+')')}catch(e){tErr='Service de transports injoignable.'}})()]);
+if(id!==cid)return;$('#tmsg').innerHTML=res.transit?'':`🚆 ${esc(tErr||'Transport indisponible.')} <a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=${rt.a.lat},${rt.a.lon}&destination=${rt.b.lat},${rt.b.lon}&travelmode=transit">Voir sur Google Maps</a>`;const ks=Object.keys(res);if(!ks.length){$('#cards').innerHTML='';return toast('Aucun itinéraire trouvé (hors ligne ?)')}
+$('#cards').className='cards';$('#cards').innerHTML=Object.keys(M).map(m=>{const r=res[m];const d=r?(m==='transit'?r[0].duration:r.duration):0,k=r?(m==='transit'?r[0].legs.reduce((a,l)=>a+(l.distance||0),0):r.distance):0;return`<button data-m="${m}" class="${r?'':'na'}"><span style="font-size:22px">${M[m][0]}</span><b>${r?fdur(d):'—'}</b><small>${r?fd(k):M[m][3]}</small></button>`}).join('');
+$('#cards').onclick=e=>{const b=e.target.closest('button');b&&res[b.dataset.m]&&show(b.dataset.m)};
+show(res[mode]?mode:ks[0])}
+function line(ll,col,dash){L.polyline(ll,{color:'#fff',weight:10,opacity:.85,interactive:false}).addTo(rg);const l=L.polyline(ll,{color:col,weight:6,dashArray:dash,lineCap:'round',className:'draw',interactive:false}).addTo(rg),el=l.getElement();
+if(el&&!dash&&!matchMedia('(prefers-reduced-motion:reduce)').matches){const n=el.getTotalLength();el.style.strokeDasharray=n;el.style.strokeDashoffset=n;el.getBoundingClientRect();el.style.transition='stroke-dashoffset 1.3s ease';el.style.strokeDashoffset=0;setTimeout(()=>el.style.strokeDasharray='',1400)}return l}
+const ab=(p,t)=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="ab">${t}</div>`,iconSize:[28,28]})}).addTo(rg);
+const ARW={left:'↰',right:'↱','slight left':'↖','slight right':'↗','sharp left':'⬅','sharp right':'➡',straight:'⬆',uturn:'↶'},MOD={left:'à gauche',right:'à droite','slight left':'légèrement à gauche','slight right':'légèrement à droite','sharp left':'franchement à gauche','sharp right':'franchement à droite',straight:'tout droit',uturn:'demi-tour'};
+function stepTxt(s){const m=s.maneuver,n=s.name?` sur ${esc(s.name)}`:'';if(m.type==='depart')return'Démarrer'+n;if(m.type==='arrive')return'Vous êtes arrivé';if(/roundabout|rotary/.test(m.type))return`Au rond-point, sortie ${m.exit||''}${n}`;if(m.modifier==='straight'||m.type==='continue')return'Continuer'+n;return`Tourner ${MOD[m.modifier]||''}${n}`}
+const TE={WALK:'🚶',BIKE:'🚲',BUS:'🚌',COACH:'🚌',TRAM:'🚊',SUBWAY:'🚇',METRO:'🚇',FERRY:'⛴️'};const te=m=>TE[m]||(/RAIL|TRAIN/.test(m)?'🚆':'🚍');
+function show(m){mode=m;$$('#cards button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));rg.clearLayers();ab(rt.a,'A');ab(rt.b,'B');const D=$('#det');
+if(m==='transit'){D.innerHTML=res.transit.map((it,i)=>`<button class="item" data-i="${i}" style="margin-bottom:6px"><b>${hm(it.startTime)} → ${hm(it.endTime)}</b> · ${fdur(it.duration)} · ${it.transfers} corresp.<br>${it.legs.map(l=>l.mode==='WALK'?'🚶':`<span class="leg" style="${l.routeColor?'background:#'+esc(l.routeColor):''}">${te(l.mode)} ${esc(l.displayName||l.routeShortName||'')}</span>`).join('')}</button>`).join('');D.onclick=e=>{const b=e.target.closest('button');b&&drawT(res.transit[b.dataset.i])};drawT(res.transit[0]);return}
+const r=res[m],km=r.distance/1000;line(r.geometry.coordinates.map(c=>[c[1],c[0]]),M[m][2]);map.fitBounds(L.latLngBounds(r.geometry.coordinates.map(c=>[c[1],c[0]])),pad());
+const est=m==='car'?`⛽ ≈ ${(km*S.cons/100*S.price).toFixed(2)} € · CO₂ ≈ ${(km*.12).toFixed(1)} kg`:m==='bike'?`🔥 ≈ ${Math.round(km*30)} kcal · 0 CO₂`:`🔥 ≈ ${Math.round(km*55)} kcal · 0 CO₂`;
+const arr=new Date(Date.now()+r.duration*1000);
+D.innerHTML=stats(m,r,arr)+r.legs[0].steps.map((s,i)=>`<div class="step" data-i="${i}"><i>${s.maneuver.type==='arrive'?'🏁':ARW[s.maneuver.modifier]||'⬆'}</i><span>${stepTxt(s)}</span><small class="mut">${fd(s.distance)}</small></div>`).join('');
+D.onclick=e=>{const s=e.target.closest('.step');if(s){const c=r.legs[0].steps[s.dataset.i].maneuver.location;map.flyTo([c[1],c[0]],17);if(innerWidth<820)sheet('min')}};
+$('#shR').onclick=()=>share(location.origin+location.pathname+`#r=${rt.a.lat.toFixed(5)},${rt.a.lon.toFixed(5)},${rt.b.lat.toFixed(5)},${rt.b.lon.toFixed(5)}&m=${m}`);extras(m,r)}
+function drawT(it){rg.clearLayers();ab(rt.a,'A');ab(rt.b,'B');let all=[];it.legs.forEach(l=>{const ll=l.legGeometry?dec(l.legGeometry.points,l.legGeometry.precision??6):[];all=all.concat(ll);ll.length&&line(ll,l.mode==='WALK'?'#2563eb':(l.routeColor?'#'+l.routeColor:M.transit[2]),l.mode==='WALK'?'1 10':null)});all.length&&map.fitBounds(L.latLngBounds(all),pad());
+let h=$('#legs');h||($('#det').insertAdjacentHTML('beforeend','<div id="legs"></div>'),h=$('#legs'));h.innerHTML='<hr>'+tsum(it)+it.legs.map(l=>`<div class="step"><i>${te(l.mode)}</i><span>${l.mode==='WALK'?'Marcher':esc((l.displayName||l.routeShortName||'')+' '+(l.headsign?'→ '+l.headsign:''))}<small class="mut" style="display:block">${hm(l.startTime)} ${esc(l.from.name||'')} → ${hm(l.endTime)} ${esc(l.to.name||'')}</small></span><small class="mut">${fdur(l.duration)}</small></div>`).join('')}
+
+/* Favoris / réglages */
+function renderSaved(){const row=(p,i,t)=>`<div class="fld"><button class="item" data-t="${t}" data-i="${i}" style="flex:1"><b>${esc(p.name)}</b><small>${esc(p.sub||'')}</small></button><button data-d="${t}${i}" aria-label="Supprimer">✕</button></div>`;
+$('#fav').innerHTML='<h3>★ Favoris</h3>'+(S.fav.map((p,i)=>row(p,i,'f')).join('')||'<p class="mut">Touchez ☆ sur un lieu pour l\'enregistrer ici.</p>');
+$('#hist').innerHTML='<h3>Récents</h3>'+(S.hist.map((p,i)=>row(p,i,'h')).join('')||'<p class="mut">Vos recherches apparaîtront ici.</p>')}
+$('#t-saved').onclick=e=>{const d=e.target.closest('[data-d]');if(d){const t=d.dataset.d[0],i=+d.dataset.d.slice(1);(t==='f'?S.fav:S.hist).splice(i,1);save();return renderSaved()}const b=e.target.closest('.item[data-t]');b&&showPlace((b.dataset.t==='f'?S.fav:S.hist)[b.dataset.i])};
+$('#s-theme').value=S.theme;$('#s-base').value=S.base;$('#s-unit').value=S.unit;$('#s-cons').value=S.cons;$('#s-price').value=S.price;$$('[data-o]').forEach(c=>c.checked=S.ov.includes(c.dataset.o));
+$('#s-theme').onchange=e=>{S.theme=e.target.value;theme();setBase(S.base);save()};matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change',()=>setBase(S.base));$('#s-base').onchange=e=>{forceOsm=0;S.base=e.target.value;setBase(S.base);save()};$('#s-unit').onchange=e=>{S.unit=e.target.value;save()};
+$('#s-cons').onchange=e=>{S.cons=+e.target.value||6.5;save()};$('#s-price').onchange=e=>{S.price=+e.target.value||1.85;save()};
+$$('[data-o]').forEach(c=>c.onchange=()=>{S.ov=$$('[data-o]').filter(x=>x.checked).map(x=>x.dataset.o);setOv();save()});
+renderSaved();
+
+/* PWA */
+let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;$('#inst').hidden=false});
+$('#inst').onclick=async()=>{if(dp){dp.prompt();await dp.userChoice;dp=null;$('#inst').hidden=true}};
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+/* Liens partagés */
+(async()=>{const h=new URLSearchParams(location.hash.slice(1));
+if(h.get('t'))tab(h.get('t'));
+if(h.get('p')){const[la,lo]=h.get('p').split(',').map(Number);if(la&&lo)showPlace(await rev({lat:la,lng:lo}))}
+if(h.get('r')){const v=h.get('r').split(',').map(Number);if(v.length===4&&v.every(Number.isFinite)){mode=h.get('m')in M?h.get('m'):'car';setPt('a',{lat:v[0],lon:v[1],name:'Départ'});setPt('b',{lat:v[2],lon:v[3],name:'Arrivée'});tab('route')}}})();
+
+/* Consentement + installation */
+const CV='2026-11c',lg=$('#legal'),ban=$('#ban');
+const ok=()=>{try{return JSON.parse(localStorage.getItem('talcomap-consent')||'{}').v===CV}catch(e){return false}};
+const standalone=()=>matchMedia('(display-mode:standalone)').matches||navigator.standalone;
+const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function askLegal(){lg.hidden=false;$('#lck').checked=false;$('#lok').disabled=true;try{$('#lan').checked=!!JSON.parse(localStorage.getItem('talcomap-consent')||'{}').an}catch(e){}}
+$('#lck').onchange=e=>$('#lok').disabled=!e.target.checked;
+$('#lok').onclick=()=>{try{localStorage.setItem('talcomap-consent',JSON.stringify({v:CV,t:Date.now(),an:$('#lan').checked}))}catch(e){}lg.hidden=true;offer();fbStart().then(anOn)};
+$('#lno').onclick=()=>{toast('TalcoMap nécessite votre accord pour fonctionner.');$('#lck').focus()};
+$('#s-legal').onclick=askLegal;
+async function doInstall(){if(dp){dp.prompt();await dp.userChoice;dp=null;ban.hidden=true;$('#inst').hidden=true}else if(ios)toast('Touchez Partager puis « Sur l\'écran d\'accueil »');else toast("Utilisez le menu du navigateur : « Installer l'application »")}
+function offer(){if(standalone()||sessionStorage.getItem('talco-ban'))return;if(ios){$('#bs').textContent='Touchez Partager, puis « Sur l\'écran d\'accueil ».';$('#bi').hidden=true}ban.hidden=false}
+$('#bi').onclick=doInstall;$('#s-inst').onclick=doInstall;$('#inst').onclick=doInstall;
+$('#bx').onclick=()=>{ban.hidden=true;try{sessionStorage.setItem('talco-ban',1)}catch(e){}};
+addEventListener('beforeinstallprompt',()=>{if(ok()&&!standalone()&&!sessionStorage.getItem('talco-ban'))ban.hidden=false});
+ok()?(setTimeout(offer,1200),fbStart()):askLegal();
+
+/* Détails de trajet et outils */
+const tile=(b,t)=>`<div><b>${b}</b><small>${t}</small></div>`;
+const wic=c=>c===0?'☀️':c<4?'⛅':c<50?'🌫️':c<70?'🌧️':c<80?'❄️':c<85?'🌦️':c<95?'🌨️':'⛈️';
+const wget=p=>fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`).then(x=>x.json());
+const wtxt=c=>`${wic(c.weather_code)} ${Math.round(c.temperature_2m)}° · vent ${Math.round(c.wind_speed_10m)} km/h`;
+function wx(p){wget(p).then(j=>{const e=$('#wx');e&&j.current&&(e.textContent=wtxt(j.current)+(j.elevation!=null?` · alt. ${Math.round(j.elevation)} m`:''))}).catch(()=>{})}
+function wxd(){wget(rt.b).then(j=>{const e=$('#wxd');e&&j.current&&(e.textContent="À l'arrivée : "+wtxt(j.current))}).catch(()=>{})}
+const xtra=p=>{const x=p.x||{},t=[];x.opening_hours&&t.push(ohHtml(x.opening_hours));const ph=x.phone||x['contact:phone'];ph&&t.push('📞 '+esc(ph));const w=x.website||x['contact:website'];/^https?:\/\//.test(w||'')&&t.push(`<a href="${esc(w)}" target="_blank" rel="noopener">🌐 Site web</a>`);return t.length?`<p class="mut">${t.join('<br>')}</p>`:''};
+const gl=m=>{const a=rt.a,b=rt.b,g={car:'driving',bike:'bicycling',foot:'walking',transit:'transit'}[m],d={car:'d',bike:'d',foot:'w',transit:'r'}[m],o='target="_blank" rel="noopener"';return`<div class="links"><a class="btn" ${o} href="https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=${g}">Google Maps</a><a class="btn" ${o} href="https://maps.apple.com/?saddr=${a.lat},${a.lon}&daddr=${b.lat},${b.lon}&dirflg=${d}">Plans</a>${m==='car'?`<a class="btn" ${o} href="https://waze.com/ul?ll=${b.lat},${b.lon}&navigate=yes">Waze</a>`:''}</div>`};
+function stats(m,r,arr){const km=r.distance/1000,v=km/(r.duration/3600),t=[tile(fdur(r.duration),'Durée'),tile(fd(r.distance),'Distance'),tile(hm(arr),'Arrivée'),tile(S.unit==='mi'?Math.round(v*.621)+' mph':Math.round(v)+' km/h','Vitesse moy.'),tile(r.legs[0].steps.length,'Étapes')];
+if(m==='car')t.push(tile((km*S.cons/100*S.price).toFixed(2)+' €','Carburant'),tile((km*.12).toFixed(1)+' kg','CO₂'));else t.push(tile('≈ '+Math.round(km*(m==='bike'?30:55))+' kcal','Calories'),m==='foot'?tile(Math.round(km*1312).toLocaleString('fr'),'Pas'):tile('0 kg','CO₂'));
+const roads=[...new Set(r.legs[0].steps.map(s=>s.name).filter(Boolean))].slice(0,5);
+return`<div class="stats">${t.join('')}</div>${roads.length?`<p class="mut">Via ${esc(roads.join(', '))}</p>`:''}<p class="mut" id="wxd"></p><div id="elev"></div>${gl(m)}<div class="row" style="margin-top:8px"><button class="pri" id="nav">▶ Guidage</button><button id="navS">Simuler</button><button id="gpx">GPX</button><button id="vox">🔊 Consignes</button><button id="shR">Partager</button><button id="svT">💾 Enregistrer</button><button id="cpy">Copier</button></div>`}
+function tsum(it){const w=it.legs.filter(l=>l.mode==='WALK'),wt=w.reduce((a,l)=>a+l.duration,0),wd=w.reduce((a,l)=>a+(l.distance||0),0),st=it.legs.reduce((a,l)=>a+(l.intermediateStops?.length||0),0);setTimeout(wxd);return`<div class="stats">${tile(fdur(it.duration),'Durée')}${tile(it.transfers,'Correspondances')}${tile(fdur(wt),'À pied')}${tile(fd(wd),'Marche')}${tile(hm(it.startTime),'Départ')}${tile(hm(it.endTime),'Arrivée')}${st?tile(st,'Arrêts'):''}</div><p class="mut" id="wxd"></p>${gl('transit')}`}
+function extras(m,r){wxd();$('#nav').onclick=()=>navStart(m,r);$('#svT').onclick=()=>saveTrip(m,r);$('#navS').onclick=()=>navStart(m,r,1);
+$('#gpx').onclick=()=>{const pts=r.geometry.coordinates.map(c=>`<trkpt lat="${c[1]}" lon="${c[0]}"/>`).join('');const u=document.createElement('a');u.href=URL.createObjectURL(new Blob([`<?xml version="1.0"?><gpx version="1.1" creator="TalcoMap" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(rt.a.name)} - ${esc(rt.b.name)}</name><trkseg>${pts}</trkseg></trk></gpx>`],{type:'application/gpx+xml'}));u.download='talcomap.gpx';u.click();setTimeout(()=>URL.revokeObjectURL(u.href),5e3)};
+$('#vox').onclick=()=>{if(!window.speechSynthesis)return toast('Voix non supportée');if(speechSynthesis.speaking)return speechSynthesis.cancel();r.legs[0].steps.forEach(s=>{const d=document.createElement('div');d.innerHTML=stepTxt(s);const u=new SpeechSynthesisUtterance(d.textContent+', puis continuer '+fd(s.distance));u.lang='fr-FR';speechSynthesis.speak(u)})};
+$('#cpy').onclick=()=>{navigator.clipboard?.writeText(`${rt.a.name} → ${rt.b.name} : ${M[m][3]}, ${fdur(r.duration)}, ${fd(r.distance)}`);toast('Résumé copié')};
+const co=r.geometry.coordinates,n=Math.min(60,co.length);if(n<2)return;const pts=Array.from({length:n},(_,i)=>co[Math.round(i*(co.length-1)/(n-1))]);
+fetch(`https://api.open-meteo.com/v1/elevation?latitude=${pts.map(c=>c[1].toFixed(4))}&longitude=${pts.map(c=>c[0].toFixed(4))}`).then(x=>x.json()).then(j=>{const e=j.elevation,el=$('#elev');if(!e||!el||m!==mode)return;let up=0,dn=0;e.forEach((v,i)=>{if(i){const d=v-e[i-1];d>0?up+=d:dn-=d}});const mn=Math.min(...e),mx=Math.max(...e),W=300,H=60,pa=e.map((v,i)=>`${(i/(n-1)*W).toFixed(1)},${(H-(v-mn)/Math.max(1,mx-mn)*(H-6)-3).toFixed(1)}`).join(' ');el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="64" preserveAspectRatio="none"><polygon points="0,${H} ${pa} ${W},${H}" fill="rgba(10,132,255,.25)"/><polyline points="${pa}" fill="none" stroke="#1a73e8" stroke-width="2"/></svg><p class="mut">⛰ +${Math.round(up)} m · −${Math.round(dn)} m · alt. ${Math.round(mn)}–${Math.round(mx)} m</p>`}).catch(()=>{})}
+let meas=0,mp=[],ml=L.layerGroup().addTo(map);
+$('#ms').onclick=()=>{meas=!meas;ml.clearLayers();mp=[];$('#ms').style.background=meas?'var(--acc)':'';toast(meas?'Touchez la carte pour mesurer':'Mesure terminée')};
+function addM(ll){mp.push(ll);ml.clearLayers();L.polyline(mp,{color:'#ff9f0a',weight:4,dashArray:'6 8'}).addTo(ml);mp.forEach(q=>L.circleMarker(q,{radius:5,color:'#ff9f0a',fillOpacity:1}).addTo(ml));let d=0;for(let i=1;i<mp.length;i++)d+=mp[i-1].distanceTo(mp[i]);if(mp.length>1)toast('Distance : '+fd(d))}
+$('#bc').onclick=()=>{const k=Object.keys(B),n=k[(k.indexOf(S.base)+1)%k.length];forceOsm=0;S.base=n;setBase(n);$('#s-base').value=n;save();toast('Fond : '+$('#s-base').selectedOptions[0].text)};
+$('#fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
+let wid;$('#s-follow').onchange=e=>{if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}if(!e.target.checked)return;if(!navigator.geolocation)return toast('Géolocalisation non supportée');let f=1;wid=navigator.geolocation.watchPosition(q=>{const ll=[q.coords.latitude,q.coords.longitude];mc&&map.removeLayer(mc);mc=L.layerGroup([L.circle(ll,{radius:q.coords.accuracy,weight:1,color:'#1a73e8',fillOpacity:.1}),L.marker(ll,{icon:L.divIcon({className:'me',html:'<i></i>',iconSize:[18,18]})})]).addTo(map);map.panTo(ll);if(f){map.setZoom(Math.max(map.getZoom(),16));f=0}},()=>toast('Suivi indisponible'),{enableHighAccuracy:true})};
+$('#s-clear').onclick=()=>{if(confirm('Effacer favoris, récents et réglages ?')){try{localStorage.removeItem('talcomap')}catch(e){}location.reload()}};
+function setHW(k,q){S[k]={lat:q.lat,lon:q.lon,name:q.name,sub:q.sub};save();hw();toast((k==='home'?'Domicile':'Travail')+' enregistré')}
+function hw(){$('#hw').innerHTML=['home','work'].map(k=>`<button data-k="${k}">${k==='home'?'🏠 Domicile':'💼 Travail'}${S[k]?'':' ＋'}</button>`).join('')}
+$('#hw').onclick=e=>{const b=e.target.closest('button');if(!b)return;const q=S[b.dataset.k];if(!q)return toast('Ouvrez un lieu puis touchez 🏠 ou 💼');setPt('b',q)};hw();
+
+/* Horaires d'ouverture */
+const DN=['Su','Mo','Tu','We','Th','Fr','Sa'],DF=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],hh=m=>{m%=1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+function parseOH(str){str=(str||'').trim();if(!str)return null;if(str==='24/7')return Array.from({length:7},()=>[[0,1440]]);const W=Array.from({length:7},()=>[]);
+for(const part of str.split(';')){const t=part.trim();if(!t)continue;const m=t.match(/^((?:(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?,?)*)\s*(.*)$/);if(!m)return null;const days=[];(m[1]||'Mo-Su').split(',').filter(Boolean).forEach(d=>{const[a,b]=d.split('-'),i=DN.indexOf(a),j=b?DN.indexOf(b):i;let k=i;for(let n=0;n<8;n++){days.push(k);if(k===j)break;k=(k+1)%7}});
+const rest=m[2].trim();if(/^(off|closed)$/i.test(rest)){days.forEach(d=>W[d]=[]);continue}
+let rg=[];if(rest==='24/7')rg=[[0,1440]];else for(const q of rest.split(',')){const x=q.trim().match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);if(!x)return null;const a=+x[1]*60+ +x[2];let b=+x[3]*60+ +x[4];if(b<=a)b+=1440;rg.push([a,b])}
+days.forEach(d=>W[d]=rg.slice())}return W}
+function ost(str){const W=parseOH(str);if(!W)return null;const n=new Date(),d=n.getDay(),t=n.getHours()*60+n.getMinutes();
+for(const[a,b]of W[d])if(t>=a&&t<b)return{open:true,text:a===0&&b===1440?'Ouvert 24h/24':'Ouvert · ferme à '+hh(b),W};
+for(const[a,b]of W[(d+6)%7])if(b>1440&&t<b-1440)return{open:true,text:'Ouvert · ferme à '+hh(b-0),W};
+for(let k=0;k<7;k++){const dd=(d+k)%7,nx=W[dd].map(r=>r[0]).filter(a=>k>0||a>t).sort((a,b)=>a-b)[0];if(nx!=null)return{open:false,text:'Fermé · ouvre '+(k===0?'à ':k===1?'demain à ':DF[dd]+' à ')+hh(nx),W}}return{open:false,text:'Fermé',W}}
+function ohHtml(str){const o=ost(str);if(!o)return '🕒 '+esc(str);const td=new Date().getDay();return`<b style="color:${o.open?'#1f9d55':'#d92d20'}">${o.open?'🟢':'🔴'} ${o.text}</b><br><small>${[1,2,3,4,5,6,0].map(d=>`${d===td?'<b>':''}${DF[d]} : ${o.W[d].length?o.W[d].map(r=>hh(r[0])+'–'+hh(r[1])).join(', '):'fermé'}${d===td?'</b>':''}`).join('<br>')}</small><br><small>Heure de votre appareil</small>`}
+const ob=x=>{const o=ost(x.x?.opening_hours);return o?(o.open?' · 🟢 Ouvert':' · 🔴 Fermé'):''};
+$('#onlyOpen').onchange=()=>$('#chips .on')?.click();
+/* Horaires trains / bus / métro */
+async function deps(p,arr){const e=$('#dep');e.innerHTML='<div class="load"></div>';try{
+let g=await(await fetch(`https://api.transitous.org/api/v1/reverse-geocode?place=${p.lat},${p.lon}&type=STOP`)).json();g=(g||[]).find(z=>z.id);if(!g){g=await(await fetch(`https://api.transitous.org/api/v1/geocode?text=${encodeURIComponent(p.name)}&type=STOP&place=${p.lat},${p.lon}`)).json();g=(g||[]).find(z=>z.id)}
+if(!g)return e.innerHTML='<p class="mut">Aucun arrêt ou gare à proximité.</p>';
+const j=await(await fetch(`https://api.transitous.org/api/v5/stoptimes?stopId=${encodeURIComponent(g.id)}&n=15&radius=250&arriveBy=${!!arr}`)).json(),ST=j.stopTimes||[];
+e.innerHTML=`<p class="mut" style="margin-top:8px">🚉 ${esc(g.name||'')}</p><div class="row" style="margin:6px 0"><button data-a="0" class="${arr?'':'pri'}">Départs</button><button data-a="1" class="${arr?'pri':''}">Arrivées</button></div>`+(ST.length?ST.map(z=>{const pl=z.place||{},k=arr?'arrival':'departure',t=pl[k]||pl['scheduled'+(arr?'Arrival':'Departure')],sc=pl['scheduled'+(arr?'Arrival':'Departure')],dl=t&&sc?Math.round((new Date(t)-new Date(sc))/6e4):0;return`<div class="step"><i>${te(z.mode)}</i><span><b>${esc(z.displayName||z.routeShortName||'')}</b> ${esc(z.headsign||z.tripTo?.name||'')}<small class="mut" style="display:block">${esc(pl.name||'')}${pl.track?' · voie '+esc(pl.track):''}${z.cancelled?' · ❌ supprimé':''}</small></span><b>${t?hm(t):''}</b>${dl>0?`<small style="color:#d92d20">+${dl}</small>`:''}</div>`}).join(''):'<p class="mut">Aucun passage prévu.</p>');
+e.onclick=ev=>{const b=ev.target.closest('[data-a]');b&&deps(p,+b.dataset.a)}}catch(err){e.innerHTML='<p class="mut">Horaires indisponibles (hors ligne ?).</p>'}}
+/* Avions */
+function air(p){const x=p.x||{},ic=x.icao,ia=x.iata;if(!(ic||ia||/a[ée]roport|airport/i.test(p.name||'')))return;const q=encodeURIComponent((p.name||'')+' vols départs arrivées'),o='target="_blank" rel="noopener"';
+$('#air').innerHTML=`<div class="links" style="margin:8px 0"><a class="btn" ${o} href="${ia?'https://www.flightradar24.com/data/airports/'+encodeURIComponent(ia.toLowerCase()):'https://www.google.com/search?q='+q}">✈️ Vols${ia?' '+esc(ia):''}</a><a class="btn" ${o} href="https://www.google.com/search?q=${q}">Horaires</a>${ic?'<button id="oss">Derniers vols</button>':''}</div><div id="fl"></div>`;
+if(ic)$('#oss').onclick=async()=>{const t=Math.floor(Date.now()/1e3),f=$('#fl');f.innerHTML='<div class="load"></div>';try{const[d,a]=await Promise.all(['departure','arrival'].map(k=>fetch(`https://opensky-network.org/api/flights/${k}?airport=${encodeURIComponent(ic)}&begin=${t-7200}&end=${t}`).then(r=>r.ok?r.json():[])));const row=(k,v)=>`<div class="step"><i>${k}</i><span><b>${esc((v.callsign||'').trim()||v.icao24)}</b> <small class="mut">${esc(v.estDepartureAirport||'?')} → ${esc(v.estArrivalAirport||'?')}</small></span><b>${hm((k==='🛫'?v.firstSeen:v.lastSeen)*1000)}</b></div>`,h=[...d.map(v=>row('🛫',v)),...a.map(v=>row('🛬',v))].join('');f.innerHTML='<p class="mut">Vols des 2 dernières heures (OpenSky, observés, pas les horaires planifiés)</p>'+(h||'<p class="mut">Aucun vol récent.</p>')}catch(e){f.innerHTML='<p class="mut">OpenSky indisponible.</p>'}}}
+/* Guidage en temps réel (style Waze) */
+let nw=null,nr=null,nc=0,spk={},lastRe=0,mute=false,wl=null,nfirst=1,nfree=0,nsim=null,nmode='car',nll=null,nhd=0,rot=0,nlast=null,nl1=null,nl2=null,nco=[],nidx=0,lastLim=0,nlim=0,cm=null,rerouting=0;
+const say=t=>{if(mute||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';speechSynthesis.speak(u)};
+const plain=h=>{const d=document.createElement('div');d.innerHTML=h;return d.textContent};
+const sd=d=>d>=950?(d/1000).toFixed(1).replace('.',',')+' kilomètres':Math.max(10,Math.round(d/50)*50)+' mètres';
+const bearing=(a,b)=>{const t=Math.PI/180,y=Math.sin((b.lng-a.lng)*t)*Math.cos(b.lat*t),x=Math.cos(a.lat*t)*Math.sin(b.lat*t)-Math.sin(a.lat*t)*Math.cos(b.lat*t)*Math.cos((b.lng-a.lng)*t);return(Math.atan2(y,x)/t+360)%360};
+function mapRot(on){const m=$('#map');m.classList.toggle('rot',on);if(!on){m.style.transform='';m.style.setProperty('--hd','0deg')}map.invalidateSize();map.dragging[on?'disable':'enable']()}
+const carIcon=()=>L.divIcon({className:'',html:'<div class="car"><svg viewBox="0 0 40 40" width="46" height="46"><circle cx="20" cy="20" r="18" fill="rgba(26,115,232,.22)"/><path d="M20 5l11 28-11-6-11 6z" fill="#1a73e8" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>',iconSize:[46,46],iconAnchor:[23,23]});
+function drawNav(){const rest=nco.slice(nidx);nl1&&nl1.setLatLngs(rest);nl2&&nl2.setLatLngs(rest)}
+function navStart(m,r,sim){if(!sim&&!navigator.geolocation)return toast('Géolocalisation non supportée');navStop(1);nr=r;nmode=m;nc=0;nidx=0;spk={};warned={};nfirst=1;nfree=0;nlim=0;nlast=null;nll=null;rot=0;$('#nlim').hidden=true;$('#nfr').textContent='🔓';
+nco=r.geometry.coordinates.map(c=>[c[1],c[0]]);document.body.classList.add('nav');$('#navui').hidden=false;$('#nti').textContent='Recherche du GPS…';$('#nta').textContent='⬆';$('#ntn').textContent='';
+rg.clearLayers();ab(rt.a,'A');ab(rt.b,'B');nl1=L.polyline(nco,{color:'#fff',weight:15,opacity:.95,interactive:false}).addTo(rg);nl2=L.polyline(nco,{color:'#1a73e8',weight:9,lineCap:'round',interactive:false}).addTo(rg);
+mc&&map.removeLayer(mc);mc=null;mapRot(true);
+const h=new Date().getHours();if(isDark()||h>=19||h<7){setBase('dark');$('#nattr').textContent='© OpenStreetMap contributors · © CARTO'}else $('#nattr').textContent='© OpenStreetMap contributors';
+try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>wl=w).catch(()=>{})}catch(e){}
+if(sim)navSim();else nw=navigator.geolocation.watchPosition(q=>navTick(q),()=>toast('Position indisponible'),{enableHighAccuracy:true,maximumAge:500});
+say(sim?'Simulation démarrée':'Guidage démarré')}
+function navStop(quiet){nw!=null&&navigator.geolocation.clearWatch(nw);nw=null;clearInterval(nsim);nsim=null;const had=nr,m=nmode;nr=null;try{wl&&wl.release();wl=null}catch(e){}window.speechSynthesis&&speechSynthesis.cancel();
+cm&&map.removeLayer(cm);cm=null;nl1=nl2=null;document.body.classList.remove('nav');$('#navui').hidden=true;$('#nrep').hidden=true;mapRot(false);setBase(S.base);
+if(had&&!quiet&&res[m]){mode=m;show(m)}}
+function navSim(){const co=nco.map(c=>L.latLng(c)),sp=nmode==='car'?14:nmode==='bike'?5:1.6;let seg=0,off=0;
+nsim=setInterval(()=>{if(!nr)return;let d=sp*.5;while(d>0&&seg<co.length-1){const len=co[seg].distanceTo(co[seg+1]);if(off+d<len){off+=d;d=0}else{d-=len-off;seg++;off=0}}
+if(seg>=co.length-1){navTick({coords:{latitude:co[co.length-1].lat,longitude:co[co.length-1].lng,accuracy:5,speed:0,heading:nhd}});clearInterval(nsim);return}
+const a=co[seg],b=co[seg+1],f=off/Math.max(1,a.distanceTo(b));navTick({coords:{latitude:a.lat+(b.lat-a.lat)*f,longitude:a.lng+(b.lng-a.lng)*f,accuracy:5,speed:sp,heading:bearing(a,b)}})},500)}
+async function reroute(ll){if(rerouting)return;rerouting=1;toast('Hors itinéraire, recalcul…');say("Recalcul de l'itinéraire");try{const j=await(await fetch(`https://routing.openstreetmap.de/${M[nmode][1]}/route/v1/driving/${ll.lng},${ll.lat};${rt.b.lon},${rt.b.lat}?overview=full&geometries=geojson&steps=true`)).json();if(j.routes?.[0]&&nr){nr=j.routes[0];res[nmode]=nr;nco=nr.geometry.coordinates.map(c=>[c[1],c[0]]);nc=0;nidx=0;spk={};drawNav()}}catch(e){}rerouting=0}
+async function limAt(ll){if(nmode!=='car'||Date.now()-lastLim<25000)return;lastLim=Date.now();try{const j=await(await fetch(OV[0],{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(`[out:json][timeout:8];way(around:18,${ll.lat},${ll.lng})[highway][maxspeed];out tags 3;`)})).json(),t=j.elements?.[0]?.tags?.maxspeed;let v=parseInt(t);if(isNaN(v))v=/urban/.test(t||'')?50:/rural/.test(t||'')?80:/motorway/.test(t||'')?130:0;nlim=v;$('#nlim').hidden=!v;$('#nlv').textContent=v||''}catch(e){}}
+function navTick(q){if(!nr)return;const ll=L.latLng(q.coords.latitude,q.coords.longitude),st=nr.legs[0].steps,loc=i=>L.latLng(st[i].maneuver.location[1],st[i].maneuver.location[0]),v=q.coords.speed||0;nll=ll;
+if(v>1.2&&q.coords.heading!=null&&!isNaN(q.coords.heading))nhd=q.coords.heading;else if(nlast&&ll.distanceTo(nlast)>6)nhd=bearing(nlast,ll);if(!nlast||ll.distanceTo(nlast)>6)nlast=ll;
+if(!cm)cm=L.marker(ll,{icon:carIcon(),zIndexOffset:1000,interactive:false}).addTo(map);cm.setLatLng(ll);const ce=cm.getElement()?.firstChild;ce&&(ce.style.transform=`rotate(${nhd}deg)`);
+const lim=nmode==='car'?70:45;let bi=nidx,bd=1e9;for(let i=Math.max(0,nidx-5);i<Math.min(nco.length,nidx+300);i++){const d=ll.distanceTo(nco[i]);if(d<bd){bd=d;bi=i}}
+if(bd>lim){bd=1e9;for(let i=0;i<nco.length;i++){const d=ll.distanceTo(nco[i]);if(d<bd){bd=d;bi=i}}}
+if(bd>lim&&Date.now()-lastRe>15000){lastRe=Date.now();reroute(ll);return}
+nidx=bi;drawNav();warnRep(ll);
+if(!nfree){const z=nmode==='car'?(v>20?16:17):18,r=nhd*Math.PI/180,d=innerHeight*.2;map.setView(map.unproject(map.project(ll,z).add([d*Math.sin(r),-d*Math.cos(r)]),z),z,{animate:!nfirst,duration:.8,easeLinearity:1});nfirst=0;
+const dl=((nhd-rot)%360+540)%360-180;rot+=dl;const m=$('#map');m.style.transform=`rotate(${-rot}deg)`;m.style.setProperty('--hd',rot+'deg')}
+while(nc+1<st.length-1&&ll.distanceTo(loc(nc+1))<25)nc++;
+const nx=st[nc+1]||st[st.length-1],d=ll.distanceTo(loc(Math.min(nc+1,st.length-1))),txt=plain(stepTxt(nx)),ic=s=>s.maneuver.type==='arrive'?'🏁':/roundabout|rotary/.test(s.maneuver.type)?'⟳':ARW[s.maneuver.modifier]||'⬆';
+$('#nta').textContent=ic(nx);$('#nti').innerHTML=`<b>${fd(d)}</b>${esc(txt)}`;const n2=st[nc+2];$('#ntn').textContent=n2&&nx.maneuver.type!=='arrive'?`Puis ${ic(n2)} ${plain(stepTxt(n2))}`:'';
+let rem=d;for(let j=nc+1;j<st.length;j++)rem+=st[j].distance;const sp=nr.distance/nr.duration;
+$('#neta').textContent=hm(Date.now()+rem/sp*1000);$('#nrt').textContent=fdur(rem/sp);$('#nrd').textContent=fd(rem);
+const kmh=Math.round(v*3.6);$('#nsv').textContent=kmh;$('#nspd').classList.toggle('over',nlim>0&&kmh>nlim+3);
+if(v>1)limAt(ll);
+const far=nmode==='car'?400:100,k=nc+'-';if(d<far&&d>=60&&!spk[k+'a']){spk[k+'a']=1;say(`Dans ${sd(d)}, ${txt}`)}if(d<60&&!spk[k+'b']){spk[k+'b']=1;say(txt)}
+if(nx.maneuver.type==='arrive'&&d<30){say('Vous êtes arrivé');toast('🏁 Arrivée');navStop()}}
+$('#nvx').onclick=()=>{navStop();toast('Guidage arrêté')};
+$('#nvv').onclick=()=>{mute=!mute;$('#nvv').textContent=mute?'🔇':'🔊'};
+$('#nfr').onclick=()=>{nfree=!nfree;mapRot(!nfree);$('#nfr').textContent=nfree?'◎':'🔓';toast(nfree?'Vue libre : touchez ◎ pour recentrer':'Vue guidage');if(!nfree)nfirst=1};
+document.addEventListener('visibilitychange',()=>{if(nr&&!document.hidden)try{navigator.wakeLock?.request('screen').then(w=>wl=w).catch(()=>{})}catch(e){}});
+const RT=[['👮','Police','police',2],['🎫','Contrôleurs','controleur',2],['💥','Accident','accident',3],['⚠️','Danger','danger',6],['🚧','Travaux','travaux',12],['🚗','Bouchon','bouchon',1],['📸','Radar','radar',24]];
+let RPC=[],cfg={police:true},lastRep=0,warned={};const rl=L.layerGroup().addTo(map);
+const rt_=t=>RT.find(x=>x[2]===t),polT=t=>t==='police'||t==='controleur'||t==='radar';
+const repOK=r=>{const d=rt_(r.type);if(!d||!r.t)return false;if(Date.now()-r.t>d[3]*36e5)return false;if(cfg.police===false&&polT(r.type))return false;return Object.values(r.v||{}).filter(x=>x===-1).length<2};
+function drawRep(){rl.clearLayers();RPC.filter(repOK).forEach(r=>{const d=rt_(r.type),vs=Object.values(r.v||{}),up=vs.filter(x=>x===1).length,dn=vs.filter(x=>x===-1).length;
+L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:`<div class="em">${d[0]}</div>`,iconSize:[26,26]})}).bindPopup(`<b>${d[1]}</b><br>par ${esc(r.pseudo||'?')} · il y a ${Math.max(1,Math.round((Date.now()-r.t)/60000))} min<br><button data-rv="${r.id}|1">👍 Toujours là (${up})</button><button data-rv="${r.id}|-1">👎 Plus là (${dn})</button>${typeof me!=='undefined'&&me&&(me.admin||me.uid===r.uid)?`<button data-rd="${r.id}">🗑 Supprimer</button>`:''}`).addTo(rl)})}
+map.on('popupopen',e=>{const el=e.popup.getElement();el&&(el.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{const[id,v]=b.dataset.rv.split('|');voteRep(id,+v);map.closePopup()}),el.querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>{delRep(b.dataset.rd);map.closePopup()}))});
+const rgrid=RT.map((r,i)=>`<button data-i="${i}">${r[0]}<small>${r[1]}</small></button>`).join('');$('#nrep').innerHTML=rgrid;$('#rpg').innerHTML=rgrid;
+$('#nsm').onclick=()=>{$('#nrep').hidden=!$('#nrep').hidden};
+$('#nrep').onclick=e=>{const b=e.target.closest('button');if(!b||!nll)return;$('#nrep').hidden=true;sendReport(RT[b.dataset.i][2],nll)};
+$('#rpg').onclick=async e=>{const b=e.target.closest('button');if(!b)return;$('#rpm').hidden=true;const h=await here();sendReport(RT[b.dataset.i][2],h?{lat:h.lat,lng:h.lon}:map.getCenter())};
+$('#rpb').onclick=()=>{if(!me)return needLogin('Connectez-vous pour signaler');$('#rpm').hidden=false};$('#rpx').onclick=()=>$('#rpm').hidden=true;
+function warnRep(ll){RPC.filter(repOK).forEach(r=>{if(warned[r.id])return;const d=ll.distanceTo([r.lat,r.lon]);if(d<350){warned[r.id]=1;const t=rt_(r.type);say(`Attention, ${t[1].toLowerCase()} signalé dans ${sd(d)}`);toast(`${t[0]} ${t[1]} à ${fd(d)}`)}})}
+async function voteRep(id,v){if(!me)return needLogin('Connectez-vous pour confirmer');try{await FB.db.set(rf(`reports/${id}/v/${me.uid}`),v)}catch(e){toast('Action refusée')}}
+async function delRep(id){try{await FB.db.remove(rf('reports/'+id));toast('Signalement supprimé')}catch(e){toast('Suppression refusée')}}
+
+/* Panneau déplaçable, recentrage, entrées */
+const panel=$('#panel');
+function sheet(st){panel.classList.remove('min','mid','full');panel.classList.add(st);panel.style.height=''}
+(()=>{let y0,h0,drag=0,moved=0;const g=$('#grip');
+g.addEventListener('pointerdown',e=>{drag=1;moved=0;y0=e.clientY;h0=panel.offsetHeight;g.setPointerCapture(e.pointerId);panel.style.transition='none'});
+g.addEventListener('pointermove',e=>{if(!drag)return;const dy=y0-e.clientY;if(Math.abs(dy)>4)moved=1;panel.style.height=Math.max(70,Math.min(innerHeight*.85,h0+dy))+'px'});
+const end=()=>{if(!drag)return;drag=0;panel.style.transition='';const h=panel.offsetHeight,v=innerHeight;sheet(!moved?(panel.classList.contains('min')?'mid':panel.classList.contains('mid')?'full':'min'):(h<v*.2?'min':h<v*.6?'mid':'full'))};
+g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)})();
+function fly(ll,z){const o=innerWidth<820?[0,Math.round(innerHeight*.15)]:[-210,0],pt=map.project(ll,z).add(o);map.flyTo(map.unproject(pt,z),z,{duration:.9})}
+$('#sbS').onclick=()=>tab('set');
+['#ra','#rb'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$(i).blur();$('#qr').innerHTML='';$('#rac').innerHTML='';$('#rbc').innerHTML='';calc(1)}}));
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur()});
+
+/* Glow-up : voix, photo Wikipédia, confort */
+(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;const m=$('#mic');m.hidden=false;m.onclick=()=>{const r=new SR();r.lang='fr-FR';r.onresult=e=>{const q=$('#q');q.value=e.results[0][0].transcript;q.dispatchEvent(new Event('input'))};r.onerror=()=>toast('Micro indisponible');try{r.start();toast('Je vous écoute…')}catch(e){}}})();
+map.on('click',()=>{$('#qr').innerHTML='';document.activeElement?.blur?.()});
+const _sp=showPlace;showPlace=function(p,f){_sp(p,f);wiki(p)};
+async function wiki(p){const w=p.x&&p.x.wikipedia;if(!w||!/^[a-z-]+:/.test(w))return;const[l,...t]=w.split(':'),e=$('#place');try{const j=await(await fetch(`https://${encodeURIComponent(l)}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.join(':').replace(/ /g,'_'))}`)).json();if(!j.extract||cur!==p)return;e.insertAdjacentHTML('afterbegin',(j.thumbnail?`<img src="${esc(j.thumbnail.source)}" alt="" style="width:100%;max-height:170px;object-fit:cover;border-radius:14px;margin-bottom:10px">`:'')+'')
+;e.querySelector('h3').insertAdjacentHTML('afterend',`<p style="margin:6px 0">${esc(j.extract.length>240?j.extract.slice(0,237)+'…':j.extract)} <a href="${esc(j.content_urls?.desktop?.page||'#')}" target="_blank" rel="noopener">Wikipédia</a></p>`)}catch(err){}}
+
+/* Firebase : comptes, synchronisation, signalements partagés */
+const FBC={apiKey:"AIzaSyDjGRuEWDzbxuzFEdcdG465TRdV5KXRcAA",authDomain:"itn-5-fd577.firebaseapp.com",databaseURL:"https://itn-5-fd577-default-rtdb.europe-west1.firebasedatabase.app",projectId:"itn-5-fd577",storageBucket:"itn-5-fd577.firebasestorage.app",messagingSenderId:"644450805208",appId:"1:644450805208:web:0451fbbe95848ec2417ead",measurementId:"G-PJBNGP9VG1"};
+const ADM=['anton','talco'];
+let FB=null,fbBusy=0,me=null,cpT=0;S.trips=Array.isArray(S.trips)?S.trips:[];
+const rf=p=>FB.db.ref(FB.rdb,p),arr=x=>x?Object.values(x):[];
+async function fbStart(){if(FB||fbBusy)return;fbBusy=1;try{const B='https://www.gstatic.com/firebasejs/10.14.1/',[a,au,db]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-database.js')]),app=a.initializeApp(FBC);
+FB={a,au,db,app,auth:au.getAuth(app),rdb:db.getDatabase(app)};au.onAuthStateChanged(FB.auth,onUser);
+db.onValue(db.query(rf('reports'),db.orderByChild('t'),db.startAt(Date.now()-864e5)),sn=>{RPC=[];sn.forEach(c=>{const v=c.val();v&&v.type&&v.lat&&RPC.push({id:c.key,...v})});drawRep()},()=>{});
+db.onValue(rf('config/policeAlerts'),sn=>{cfg.police=sn.val()!==false;drawRep()},()=>{});anOn()}catch(e){toast('Comptes et signalements indisponibles (réseau)')}fbBusy=0}
+async function anOn(){let c={};try{c=JSON.parse(localStorage.getItem('talcomap-consent')||'{}')}catch(e){}if(!FB)return;try{if(c.an){if(!FB.an){FB.an=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js');FB.ai=FB.an.getAnalytics(FB.app)}FB.an.setAnalyticsCollectionEnabled(FB.ai,true)}else if(FB.an)FB.an.setAnalyticsCollectionEnabled(FB.ai,false)}catch(e){}}
+async function onUser(u){if(!u){me=null;uiAcc();post({type:'talco-hello',email:null});return}
+post({type:'talco-hello',email:u.email});
+try{const b=await FB.db.get(rf('banned/'+u.uid));if(b.exists()){await FB.au.signOut(FB.auth);toast('Ce compte a été suspendu par un administrateur.');me=null;uiAcc();return}}catch(e){}
+let ps='Membre',ad=false;try{ps=(await FB.db.get(rf('users/'+u.uid+'/pseudo'))).val()||'Membre'}catch(e){}try{ad=(await FB.db.get(rf('admins/'+u.uid))).exists()}catch(e){}
+me={uid:u.uid,pseudo:ps,admin:ad};uiAcc();await loadCloud();cleanOld();drawRep();post({type:'talco-ready'})}
+function uiAcc(){const b=$('#acb');b.classList.toggle('on',!!me);b.textContent=me?me.pseudo[0].toUpperCase():'👤';if(!$('#accm').hidden)renderAcc()}
+const needLogin=m=>{toast(m);openAcc()};
+async function loadCloud(){try{const sn=await FB.db.get(rf('saved/'+me.uid));if(sn.exists()){const c=sn.val(),f=arr(c.fav),t=arr(c.trips);S.home=c.home||S.home;S.work=c.work||S.work;S.fav=[...f,...S.fav.filter(x=>!f.some(y=>y.lat===x.lat&&y.lon===x.lon))];S.trips=[...t,...S.trips.filter(x=>!t.some(y=>y.t===x.t))].slice(0,30)}
+try{localStorage.setItem('talcomap',JSON.stringify(S))}catch(e){}cloudPush();renderSaved();hw()}catch(e){}}
+function cloudPush(){clearTimeout(cpT);cpT=setTimeout(()=>{if(!me||!FB)return;FB.db.set(rf('saved/'+me.uid),JSON.parse(JSON.stringify({home:S.home||null,work:S.work||null,fav:S.fav,trips:S.trips,u:Date.now()}))).catch(()=>{})},800)}
+async function cleanOld(){try{const old=Date.now()-864e5,q=me.admin?FB.db.query(rf('reports'),FB.db.orderByChild('t'),FB.db.endAt(old)):FB.db.query(rf('reports'),FB.db.orderByChild('uid'),FB.db.equalTo(me.uid)),sn=await FB.db.get(q);sn.forEach(c=>{if((c.val().t||0)<old)FB.db.remove(rf('reports/'+c.key)).catch(()=>{})})}catch(e){}}
+async function purge(uid){const sn=await FB.db.get(FB.db.query(rf('reports'),FB.db.orderByChild('uid'),FB.db.equalTo(uid))),j=[FB.db.remove(rf('saved/'+uid))];sn.forEach(c=>{j.push(FB.db.remove(rf('reports/'+c.key)))});await Promise.all(j)}
+async function sendReport(type,ll){if(!me)return needLogin('Connectez-vous pour signaler');if(!FB)return;if(cfg.police===false&&polT(type))return toast('Les alertes police et contrôleurs sont désactivées pour le moment.');if(Date.now()-lastRep<30000)return toast('Patientez quelques secondes entre deux signalements.');lastRep=Date.now();const d=rt_(type);
+try{await FB.db.push(rf('reports'),{uid:me.uid,pseudo:me.pseudo,type,lat:+ll.lat.toFixed(5),lon:+ll.lng.toFixed(5),t:FB.db.serverTimestamp()});toast(d[0]+' '+d[1]+' signalé');say(d[1]+' signalé')}catch(e){lastRep=0;toast('Signalement refusé (compte suspendu ou réseau).')}}
+const aerr=c=>({'auth/email-already-in-use':'Ce pseudo est déjà pris.','auth/invalid-credential':'Pseudo ou mot de passe incorrect.','auth/wrong-password':'Pseudo ou mot de passe incorrect.','auth/user-not-found':'Pseudo ou mot de passe incorrect.','auth/weak-password':'Mot de passe trop court (6 caractères minimum).','auth/network-request-failed':'Réseau indisponible.','auth/operation-not-allowed':"La connexion par mot de passe n'est pas activée dans Firebase.",'auth/too-many-requests':'Trop de tentatives, réessayez plus tard.','auth/requires-recent-login':'Reconnectez-vous puis réessayez.'}[c]||'Erreur : '+c);
+function openAcc(){$('#accm').hidden=false;renderAcc();FB||fbStart()}const closeAcc=()=>$('#accm').hidden=true;
+function renderAcc(){const b=$('#acbody');if(!me){$('#act').textContent='Compte';b.innerHTML='<p class="mut">Session en cours d\'ouverture…</p>';return}
+$('#act').textContent='Mon compte';b.innerHTML=`<p>Connecté : <b>${esc(me.pseudo)}</b>${me.admin?' · 🛡 administrateur':''}</p><p class="mut">Vos favoris, domicile, travail et trajets sont synchronisés.</p><div class="row"><button id="aout">Se déconnecter</button><button id="aexp">Exporter mes données</button><button id="adel" style="color:#d93025">Supprimer mon compte</button></div>`+(me.admin?`<h3>🛡 Administration</h3><label class="ck"><input type="checkbox" id="ad-pol" ${cfg.police!==false?'checked':''}> Alertes police, contrôleurs et radars actives</label><div id="adl"><div class="load"></div></div>`:'');me.admin&&adminList()}
+async function doAuth(){}
+async function adminList(){const el=$('#adl');try{const[u,b]=await Promise.all([FB.db.get(rf('users')),FB.db.get(rf('banned'))]),bn=b.val()||{},us=u.val()||{};
+el.innerHTML=Object.entries(us).map(([id,x])=>{const adm=ADM.includes((x.pseudo||'').toLowerCase());return`<div class="step" style="cursor:default"><span><b>${esc(x.pseudo)}</b>${bn[id]?' · 🚫 suspendu':''}</span>${adm?'<small class="mut">admin</small>':`<button data-ab="${id}">${bn[id]?'Rétablir':'Bannir'}</button><button data-ad="${id}" style="color:#d93025">Supprimer</button>`}</div>`}).join('')||'<p class="mut">Aucun utilisateur.</p>'}catch(e){el.innerHTML='<p class="mut">Accès refusé ou réseau indisponible.</p>'}}
+$('#acbody').addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
+if(t.id==='ali')return doAuth(0);if(t.id==='acr')return doAuth(1);
+if(t.id==='aout'){post({type:'talco-logout'});await FB.au.signOut(FB.auth);toast('Déconnecté');return closeAcc()}
+if(t.id==='aexp'){const d={pseudo:me.pseudo,favoris:S.fav,domicile:S.home||null,travail:S.work||null,trajets:S.trips,exporte_le:new Date().toISOString()},a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='mes-donnees-talcomap.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5e3);return}
+if(t.id==='adel'){if(!confirm('Supprimer définitivement vos données TalcoMap (favoris, trajets, signalements) ?'))return;try{const u=FB.auth.currentUser;await purge(u.uid);await FB.db.remove(rf('users/'+u.uid));try{await FB.au.deleteUser(u)}catch(e){}S.fav=[];S.trips=[];S.home=S.work=null;save();renderSaved();hw();toast('Données supprimées');post({type:'talco-logout'});await FB.au.signOut(FB.auth).catch(()=>{});closeAcc()}catch(x){toast(aerr(x.code||x.message))}return}
+if(t.dataset.ab){const id=t.dataset.ab,sn=await FB.db.get(rf('banned/'+id));try{sn.exists()?await FB.db.remove(rf('banned/'+id)):await FB.db.set(rf('banned/'+id),true)}catch(x){toast('Refusé')}return adminList()}
+if(t.dataset.ad){if(!confirm('Supprimer les données et signalements de cet utilisateur et le suspendre ?'))return;try{const id=t.dataset.ad;await purge(id);await FB.db.set(rf('banned/'+id),true);await FB.db.update(rf('users/'+id),{deleted:true});toast('Utilisateur supprimé et suspendu')}catch(x){toast('Refusé')}adminList()}});
+$('#acbody').addEventListener('change',e=>{if(e.target.id==='ad-pol')FB.db.set(rf('config/policeAlerts'),e.target.checked).catch(()=>toast('Refusé'))});
+$('#acbody').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='ap'){e.preventDefault();doAuth(0)}});
+$('#acb').onclick=openAcc;$('#s-acc').onclick=openAcc;$('#acx').onclick=closeAcc;fbStart();
+function saveTrip(m,r){S.trips.unshift({a:{lat:rt.a.lat,lon:rt.a.lon,name:rt.a.name},b:{lat:rt.b.lat,lon:rt.b.lon,name:rt.b.name},m,d:r.duration,k:r.distance,t:Date.now()});S.trips=S.trips.slice(0,30);save();renderTrips();toast('Trajet enregistré'+(me?'':' sur cet appareil (connectez-vous pour le synchroniser)'))}
+function renderTrips(){const e=$('#trips');e.innerHTML='<h3>🧭 Trajets</h3>'+(S.trips.length?S.trips.map((t,i)=>`<div class="fld"><button class="trp" data-tr="${i}" style="flex:1;text-align:left;border-radius:16px;color:var(--ink)"><b>${M[t.m][0]} ${esc(t.a.name)} → ${esc(t.b.name)}</b><br><small class="mut">${fdur(t.d)} · ${fd(t.k)}</small></button><button data-td="${i}" aria-label="Supprimer">✕</button></div>`).join(''):'<p class="mut">Touchez 💾 sur un trajet pour l\'enregistrer.</p>')}
+$('#t-saved').addEventListener('click',e=>{const x=e.target.closest('[data-tr]'),y=e.target.closest('[data-td]');if(x){const t=S.trips[x.dataset.tr];if(!t)return;mode=t.m;rt.a=t.a;rt.b=t.b;$('#ra').value=t.a.name;$('#rb').value=t.b.name;tab('route');calc()}if(y){S.trips.splice(+y.dataset.td,1);save();renderTrips()}});
+const _rs=renderSaved;renderSaved=function(){_rs();renderTrips()};renderSaved();
+
+/* Horaires : hub transport */
+const TC={BUS:'Bus',COACH:'Bus',TRAM:'Tram',SUBWAY:'Métro',METRO:'Métro',SUBURBAN:'RER / Transilien',RAIL:'Train',REGIONAL_RAIL:'Train',REGIONAL_FAST_RAIL:'Train',HIGHSPEED_RAIL:'Train',LONG_DISTANCE:'Train',NIGHT_RAIL:'Train',FERRY:'Bateau',CABLE_CAR:'Câble',FUNICULAR:'Funiculaire',AERIAL_LIFT:'Câble'},tcat=m=>TC[m]||'Autre';
+let tStop=null,tArr=0,tFilter='Tous',tTimer=null,tData=[];
+async function tj(u){const r=await fetch('https://api.transitous.org/api/'+u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function nearStops(c){const out=[];
+try{const j=await tj(`v1/reverse-geocode?place=${c.lat},${c.lon}&type=STOP&numResults=15`);(j||[]).filter(x=>x.id&&x.name).forEach(x=>out.push({id:x.id,name:x.name,lat:x.lat,lon:x.lon,modes:x.modes||[]}))}catch(e){}
+if(!out.length){let j=null;const q=`[out:json][timeout:20];(nwr[highway=bus_stop](around:500,${c.lat},${c.lon});nwr[railway~"^(tram_stop|station|halt)$"](around:800,${c.lat},${c.lon}););out center 80;`;
+for(const u of OV){try{const rs=await fetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)});if(rs.ok){j=await rs.json();break}}catch(e){}}
+(j?.elements||[]).forEach(x=>{const la=x.lat??x.center?.lat,lo=x.lon??x.center?.lon,n=x.tags?.name;if(la&&n&&!out.some(o=>o.name===n&&L.latLng(o.lat,o.lon).distanceTo([la,lo])<200))out.push({name:n,lat:la,lon:lo,modes:[],ic:x.tags.highway==='bus_stop'?'BUS':x.tags.railway==='tram_stop'?'TRAM':'RAIL'})})}
+return out.map(o=>({...o,d:L.latLng(c.lat,c.lon).distanceTo([o.lat,o.lon])})).sort((a,b)=>a.d-b.d).slice(0,15)}
+async function stopId(s){if(s.id)return s.id;const j=await tj(`v1/geocode?text=${encodeURIComponent(s.name)}&type=STOP&numResults=8&place=${s.lat},${s.lon}`),p=L.latLng(s.lat,s.lon),m=(j||[]).filter(x=>x.id).sort((a,b)=>p.distanceTo([a.lat,a.lon])-p.distanceTo([b.lat,b.lon]))[0];if(!m||p.distanceTo([m.lat,m.lon])>700)throw new Error('arrêt introuvable');s.id=m.id;return m.id}
+function tList(list,title){tStop=null;clearInterval(tTimer);$('#tl').innerHTML=`<h3>${esc(title)}</h3>`+(list.length?list.map((s,i)=>`<button class="item" data-i="${i}"><b>${te(s.ic||(s.modes&&s.modes[0])||'BUS')} ${esc(s.name)}</b><small>${fd(s.d)}</small></button>`).join(''):'<p class="mut">Aucun arrêt trouvé ici.</p>');$('#tl').onclick=e=>{const b=e.target.closest('.item');b&&showStop(list[b.dataset.i])}}
+async function openTransit(p){tab('transit');$('#tl').innerHTML='<div class="load"></div>';const l=await nearStops(p);tList(l,'Arrêts près de '+(p.name||'ce lieu'));if(l.length)showStop(l[0])}
+async function showStop(s,keep){tStop=s;clearInterval(tTimer);if(!keep){tFilter='Tous';$('#tl').innerHTML='<div class="load"></div>'}
+try{const id=await stopId(s),j=await tj(`v5/stoptimes?stopId=${encodeURIComponent(id)}&n=40&radius=120&arriveBy=${!!tArr}`);if(tStop!==s)return;tData=j.stopTimes||[];s.name=j.place?.name||s.name;drawStop()}
+catch(e){$('#tl').innerHTML=`<p class="mut">Horaires indisponibles pour cet arrêt (${esc(e.message||'réseau')}).</p><button id="tBack">← Retour</button>`;$('#tBack').onclick=()=>$('#tNear').click()}
+tTimer=setInterval(()=>{if(!$('#t-transit').hidden&&tStop===s)showStop(s,1);else clearInterval(tTimer)},30000)}
+function drawStop(){const s=tStop,cats=['Tous',...new Set(tData.map(z=>tcat(z.mode)))],now=Date.now(),cap=tArr?'Arrival':'Departure',k=tArr?'arrival':'departure';
+const rows=tData.filter(z=>tFilter==='Tous'||tcat(z.mode)===tFilter).map(z=>{const pl=z.place||{},t=pl[k]||pl['scheduled'+cap],sc=pl['scheduled'+cap],dl=t&&sc?Math.round((new Date(t)-new Date(sc))/6e4):0,mn=t?Math.round((new Date(t)-now)/6e4):99,bg=z.routeColor?'#'+z.routeColor:'var(--acc)',fg=z.routeTextColor?'#'+z.routeTextColor:'#fff';
+return`<div class="step" style="cursor:default;${z.cancelled?'opacity:.5;text-decoration:line-through':''}"><span><span class="leg" style="background:${esc(bg)};color:${esc(fg)}">${te(z.mode)} ${esc(z.displayName||z.routeShortName||'?')}</span> ${esc(z.headsign||z.tripTo?.name||'')}<small class="mut" style="display:block">${esc(pl.name||'')}${pl.track?' · voie/quai '+esc(pl.track):''}${z.realTime?' · 🟢 temps réel':''}${z.cancelled?' · ❌ supprimé':''}</small></span><span style="text-align:right"><b>${t?hm(t):''}</b><small style="display:block;color:${dl>0?'#d93025':'var(--mut)'}">${mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}${dl>0?' · +'+dl+' min':''}</small></span></div>`}).join('');
+$('#tl').innerHTML=`<div class="row"><button id="tBack" aria-label="Retour">←</button><h3 style="margin:0;flex:1">${esc(s.name)}</h3><button id="tFav" aria-label="Enregistrer">⭐</button><button id="tMap" aria-label="Voir sur la carte">📍</button></div><div class="row" style="margin:8px 0"><button data-a="0" class="${tArr?'':'pri'}">Départs</button><button data-a="1" class="${tArr?'pri':''}">Arrivées</button></div><div class="chips">${cats.map(c=>`<button data-f="${c}" class="${c===tFilter?'on':''}">${c}</button>`).join('')}</div>`+(rows||'<p class="mut">Aucun passage prévu.</p>')+`<p class="mut" style="margin-top:8px">Actualisé à ${hm(Date.now())}, mise à jour toutes les 30 s · données Transitous</p>`;
+$('#tBack').onclick=()=>{clearInterval(tTimer);tStop=null;$('#tNear').click()};$('#tMap').onclick=()=>{map.flyTo([s.lat,s.lon],17);if(innerWidth<820)sheet('min')};$('#tFav').onclick=()=>openSave({lat:s.lat,lon:s.lon,name:s.name,sub:'Arrêt',cat:'stop'});
+$('#tl').onclick=e=>{const a=e.target.closest('[data-a]'),f=e.target.closest('[data-f]');if(a){tArr=+a.dataset.a;showStop(s)}if(f){tFilter=f.dataset.f;drawStop()}}}
+$('#tNear').onclick=async()=>{tab('transit');$('#tl').innerHTML='<div class="load"></div>';const h=await here();if(!h){$('#tl').innerHTML='<p class="mut">Position indisponible. Cherchez un arrêt ci-dessus.</p>';return}tList(await nearStops(h),'Arrêts autour de vous')};
+for(const k of['home','work'])$(k==='home'?'#tHome':'#tWork').onclick=async()=>{if(!S[k])return toast('Enregistrez d\'abord ce lieu (onglet Mes lieux)');$('#tl').innerHTML='<div class="load"></div>';tList(await nearStops(S[k]),'Arrêts près de '+(k==='home'?'chez vous':'du travail'))};
+let tqT;$('#tq').addEventListener('input',()=>{clearTimeout(tqT);const q=$('#tq').value.trim();if(q.length<2){$('#tqr').innerHTML='';return}tqT=setTimeout(async()=>{try{const c=map.getCenter(),j=(await tj(`v1/geocode?text=${encodeURIComponent(q)}&type=STOP&numResults=8&place=${c.lat},${c.lng}`)).filter(x=>x.id);$('#tqr').innerHTML=j.map((x,i)=>`<button data-i="${i}"><b>${esc(x.name)}</b><small>${esc((x.areas||[]).map(a=>a.name).filter(Boolean).slice(-2).join(', '))}</small></button>`).join('')||'<p class="mut">Aucun arrêt trouvé</p>';$('#tqr').onclick=e=>{const b=e.target.closest('button');if(!b)return;const x=j[b.dataset.i];$('#tqr').innerHTML='';$('#tq').value='';showStop({id:x.id,name:x.name,lat:x.lat,lon:x.lon})}}catch(e){$('#tqr').innerHTML='<p class="mut">Recherche indisponible</p>'}},300)});
+/* Mes lieux */
+const CATS=[['home','🏠','Domicile'],['work','💼','Travail'],['fav','⭐','Favori'],['school','🎓','École'],['sport','🏋️','Sport'],['family','👪','Famille'],['food','🍽️','Resto'],['shop','🛒','Courses'],['stop','🚏','Arrêt'],['other','📌','Autre']],cat=c=>CATS.find(x=>x[0]===c)||CATS[2],same=(a,b)=>Math.abs(a.lat-b.lat)<5e-5&&Math.abs(a.lon-b.lon)<5e-5;
+let svP=null,svC='fav';
+function openSave(p){svP=p;const ex=S.fav.find(f=>same(f,p))||(S.home&&same(S.home,p)?{...S.home,cat:'home'}:null)||(S.work&&same(S.work,p)?{...S.work,cat:'work'}:null);svC=ex?.cat||p.cat||'fav';$('#svn').value=ex?.name||p.name||'';$('#svd').hidden=!ex;drawCats();$('#svm').hidden=false}
+function drawCats(){$('#svc').innerHTML=CATS.map(c=>`<button data-c="${c[0]}" class="${c[0]===svC?'on':''}">${c[1]} ${c[2]}</button>`).join('')}
+$('#svc').onclick=e=>{const b=e.target.closest('button');if(b){svC=b.dataset.c;drawCats()}};$('#svx').onclick=()=>$('#svm').hidden=true;
+$('#svok').onclick=()=>{const p=svP,n=$('#svn').value.trim()||p.name||'Lieu',o={lat:p.lat,lon:p.lon,name:n,sub:p.sub||'',cat:svC};S.fav=S.fav.filter(f=>!same(f,p));if(S.home&&same(S.home,p)&&svC!=='home')S.home=null;if(S.work&&same(S.work,p)&&svC!=='work')S.work=null;if(svC==='home')S.home=o;else if(svC==='work')S.work=o;else S.fav.unshift(o);save();renderSaved();hw();$('#svm').hidden=true;toast(cat(svC)[1]+' '+n+' enregistré');if(cur&&same(cur,p))showPlace(cur)};
+$('#svd').onclick=()=>{const p=svP;S.fav=S.fav.filter(f=>!same(f,p));if(S.home&&same(S.home,p))S.home=null;if(S.work&&same(S.work,p))S.work=null;save();renderSaved();hw();$('#svm').hidden=true;toast('Lieu supprimé');if(cur&&same(cur,p))showPlace(cur)};
+const plL=L.layerGroup().addTo(map);
+function drawPl(){plL.clearLayers();if(S.showPl===false)return;[...(S.home?[{...S.home,cat:'home'}]:[]),...(S.work?[{...S.work,cat:'work'}]:[]),...S.fav].forEach(p=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div style="font-size:18px;background:var(--surf);border-radius:50%;width:32px;height:32px;display:grid;place-items:center;box-shadow:var(--sd)">${cat(p.cat)[1]}</div>`,iconSize:[32,32]}),zIndexOffset:-100}).on('click',()=>showPlace(p)).addTo(plL))}
+renderSaved=function(){const tile=(k,ic,lb)=>{const p=S[k];return`<div class="pl" data-k="${k}"><div class="plh">${ic}</div><b>${lb}</b><small class="mut">${p?esc(p.name):'À définir'}</small>${p?'<div class="row"><button data-a="go">Y aller</button><button data-a="bus" aria-label="Horaires">🚌</button></div>':'<button data-a="set">＋ Définir</button>'}</div>`};
+const fav=S.fav.map((p,i)=>{const c=cat(p.cat);return`<div class="pl2" data-i="${i}"><span class="plh">${c[1]}</span><span style="flex:1;min-width:0"><b>${esc(p.name)}</b><small class="mut" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c[2]}${p.sub?' · '+esc(p.sub):''}</small></span><button data-a="show" aria-label="Voir">📍</button><button data-a="go">Y aller</button><button data-a="bus" aria-label="Horaires">🚌</button><button data-a="del" aria-label="Supprimer">✕</button></div>`}).join('');
+$('#fav').innerHTML=`<div class="plg">${tile('home','🏠','Domicile')}${tile('work','💼','Travail')}</div><h3>⭐ Mes lieux</h3>`+(fav||'<p class="mut">Ouvrez un lieu puis touchez ⭐ pour l\'enregistrer (domicile, travail, école, sport…).</p>')+`<label class="ck" style="margin-top:10px"><input type="checkbox" id="showPl" ${S.showPl!==false?'checked':''}> Afficher mes lieux sur la carte</label>`;
+$('#hist').innerHTML='<h3>🕘 Récents</h3>'+(S.hist.map((p,i)=>`<div class="fld"><button class="item" data-t="h" data-i="${i}" style="flex:1"><b>${esc(p.name)}</b><small>${esc(p.sub||'')}</small></button><button data-d="h${i}" aria-label="Supprimer">✕</button></div>`).join('')||'<p class="mut">Vos recherches apparaîtront ici.</p>');renderTrips();drawPl()};
+$('#fav').addEventListener('click',e=>{const sw=e.target.closest('#showPl');if(sw){S.showPl=sw.checked;save();drawPl();return}const b=e.target.closest('button[data-a]');if(!b)return;const t=b.closest('[data-k]'),r=b.closest('[data-i]'),a=b.dataset.a,p=t?S[t.dataset.k]:r?S.fav[r.dataset.i]:null;
+if(a==='set'){tab('explore');toast('Cherchez un lieu, touchez ⭐ puis choisissez '+(t.dataset.k==='home'?'Domicile':'Travail'));$('#q').focus();return}
+if(!p)return;if(a==='show'){showPlace(p)}else if(a==='go'){tab('route');setPt('b',p,0);calc(1)}else if(a==='bus'){openTransit(p)}else if(a==='del'){S.fav.splice(+r.dataset.i,1);save();renderSaved();hw()}});
+hw=function(){const f=S.fav.slice(0,5).map((p,i)=>`<button data-f="${i}">${cat(p.cat)[1]} ${esc(p.name)}</button>`).join('');$('#hw').innerHTML=['home','work'].map(k=>`<button data-k="${k}">${k==='home'?'🏠 Domicile':'💼 Travail'}${S[k]?'':' ＋'}</button>`).join('')+f};
+$('#hw').onclick=e=>{const b=e.target.closest('button');if(!b)return;const q=b.dataset.f!==undefined?S.fav[b.dataset.f]:S[b.dataset.k];if(!q)return toast('Ouvrez un lieu puis touchez ⭐ pour le définir');setPt('b',q)};
+$('#qa').innerHTML='<button data-q="home">🏠 Domicile</button><button data-q="work">💼 Travail</button><button data-q="bus">🚌 Arrêts proches</button><button data-q="saved">⭐ Mes lieux</button><button data-q="rep">🚨 Signaler</button>';
+$('#qa').onclick=e=>{const b=e.target.closest('button');if(!b)return;const q=b.dataset.q;if(q==='home'||q==='work')S[q]?showPlace(S[q]):toast('Pas encore défini : ouvrez un lieu puis touchez ⭐');else if(q==='bus'){tab('transit');$('#tNear').click()}else if(q==='saved')tab('saved');else $('#rpb').click()};
+hw();renderSaved();
+</script>
+</body></html>

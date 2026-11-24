@@ -1,0 +1,5 @@
+TalcoMap — SITE SECRET (compte talcoitn-k9x2mp7vl4wq6ty1hb5jn3rd8fk4sz)
+Depot : map-rbc8upyke3wu4oq1ievi4gjb51mrz8a08pac09l2rrqbktcqmbkarbo3m9ciijsb
+Adresse : https://talcoitn-k9x2mp7vl4wq6ty1hb5jn3rd8fk4sz.github.io/map-rbc8upyke3wu4oq1ievi4gjb51mrz8a08pac09l2rrqbktcqmbkarbo3m9ciijsb/
+Tous les fichiers a la racine. Plus de formulaire de connexion : fonctionne uniquement dans https://natlacaxi.github.io/carte/.
+Serveur Firebase : itn-5 (regles : firebase-prive.zip > itn-5_realtime.rules.json).
